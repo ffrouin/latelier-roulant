@@ -442,6 +442,7 @@ function animate(time) {
 }
 const offerButton = document.querySelector('.cta');
 const serviceScene = document.querySelector('#service-scene');
+const serviceContent = serviceScene.querySelector('.service-content');
 const servicePanel = document.querySelector('.copy');
 const serviceSelection = document.querySelector('#service-selection');
 const serviceStepOne = document.querySelector('#service-step-one');
@@ -467,6 +468,22 @@ const requestPdf = document.querySelector('#request-pdf');
 const requestPdfViewer = document.querySelector('#request-pdf-viewer');
 const requestPdfDownload = document.querySelector('#request-pdf-download');
 let humanGameRound = 0;
+let stepTransitionInProgress = false;
+function transitionForward(update) {
+  if (stepTransitionInProgress) return;
+  stepTransitionInProgress = true;
+  serviceContent.classList.remove('is-sliding-right');
+  serviceContent.classList.add('is-sliding-left');
+  window.setTimeout(() => {
+    update();
+    serviceContent.classList.remove('is-sliding-left');
+    serviceContent.classList.add('is-sliding-right');
+    window.setTimeout(() => {
+      serviceContent.classList.remove('is-sliding-right');
+      stepTransitionInProgress = false;
+    }, 380);
+  }, 260);
+}
 function moveHumanTarget() {
   const maxX = Math.max(8, humanGame.clientWidth - 42);
   const maxY = Math.max(8, humanGame.clientHeight - 42);
@@ -522,9 +539,11 @@ document.querySelectorAll('.service-option').forEach((option) => {
     detailDescription.value = '';
     detailFeedback.textContent = '';
     serviceSelection.textContent = `Besoin sélectionné : ${service}.`;
-    serviceStepOne.classList.add('is-hidden');
-    serviceChoice.classList.add('is-hidden');
-    serviceDetail.hidden = false;
+    transitionForward(() => {
+      serviceStepOne.classList.add('is-hidden');
+      serviceChoice.classList.add('is-hidden');
+      serviceDetail.hidden = false;
+    });
   });
 });
 document.querySelector('#detail-back').addEventListener('click', () => {
@@ -539,8 +558,10 @@ document.querySelector('#detail-next').addEventListener('click', () => {
     return;
   }
   detailFeedback.textContent = '';
-  serviceDetail.hidden = true;
-  serviceLocation.hidden = false;
+  transitionForward(() => {
+    serviceDetail.hidden = true;
+    serviceLocation.hidden = false;
+  });
 });
 document.querySelector('#location-back').addEventListener('click', () => {
   serviceLocation.hidden = true;
@@ -589,8 +610,10 @@ document.querySelector('#location-next').addEventListener('click', () => {
   requestPdf.hidden = true;
   requestPdfViewer.removeAttribute('data');
   requestPdfDownload.removeAttribute('href');
-  serviceLocation.hidden = true;
-  serviceSummary.hidden = false;
+  transitionForward(() => {
+    serviceLocation.hidden = true;
+    serviceSummary.hidden = false;
+  });
 });
 document.querySelector('#summary-back').addEventListener('click', () => {
   serviceSummary.hidden = true;
@@ -683,8 +706,10 @@ humanContinue.addEventListener('click', async () => {
     requestPdfViewer.setAttribute('data', pdfUrl);
     requestPdfDownload.href = pdfUrl;
     requestPdfDownload.download = `demande-${requestId}.pdf`;
-    serviceSummary.hidden = true;
-    requestPdf.hidden = false;
+    transitionForward(() => {
+      serviceSummary.hidden = true;
+      requestPdf.hidden = false;
+    });
     humanContinue.textContent = 'Demande envoyée';
     humanFeedback.textContent = `Votre demande a été envoyée. Référence : ${requestId}.`;
   } catch (error) {
