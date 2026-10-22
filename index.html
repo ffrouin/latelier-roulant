@@ -17,21 +17,22 @@
     * { box-sizing:border-box; }
     html { scroll-behavior:smooth; }
     body { margin:0; color:var(--ink); background:var(--paper); font-family:'DM Sans',sans-serif; }
-    .page { min-height:100vh; overflow:hidden; position:relative; }
+    .page { height:100vh; min-height:100vh; width:100%; overflow:hidden; position:relative; display:flex; flex-direction:column; }
     nav { display:flex; justify-content:space-between; align-items:center; padding:28px clamp(24px,5vw,76px); position:absolute; inset:0 0 auto; z-index:3; }
     .brand { font:700 1.05rem 'Space Grotesk',sans-serif; letter-spacing:-.03em; }
     .brand span { color:var(--accent); }
     nav a { color:var(--ink); text-decoration:none; font-size:.9rem; font-weight:600; }
-    .hero { min-height:760px; display:grid; grid-template-columns:minmax(0,1fr) minmax(380px,1fr); align-items:center; max-width:1440px; margin:auto; padding:116px clamp(24px,5vw,76px) 72px; gap:32px; }
-    .copy { position:relative; z-index:2; max-width:650px; }
+    .hero { flex:1; width:100%; min-height:0; display:grid; grid-template-columns:minmax(0,520px) minmax(380px,520px); justify-content:center; align-items:center; margin:0; padding:96px clamp(24px,5vw,76px) 40px; gap:32px; }
+    .copy { position:relative; z-index:2; max-width:520px; text-align:justify; text-align-last:center; }
     .eyebrow { color:var(--accent); font-weight:700; letter-spacing:.14em; text-transform:uppercase; font-size:.72rem; margin-bottom:22px; }
     h1 { font:700 clamp(3.6rem,7vw,7.4rem)/.88 'Space Grotesk',sans-serif; letter-spacing:-.075em; margin:0 0 28px; max-width:700px; }
     h1 em { color:var(--accent); font-style:normal; }
-    .tagline { font-size:clamp(1.15rem,2vw,1.55rem); line-height:1.35; max-width:470px; margin:0 0 35px; color:#40504a; }
+    .tagline { font-size:clamp(1.15rem,2vw,1.55rem); line-height:1.35; max-width:470px; margin:0 auto 35px; color:#40504a; }
+    .eyebrow, h1, .cta { text-align:center; }
     .cta { display:inline-flex; align-items:center; gap:12px; padding:15px 20px; border-radius:999px; color:#fff; background:var(--ink); text-decoration:none; font-weight:700; transition:transform .2s, background .2s; }
     .cta:hover { transform:translateY(-2px); background:var(--accent); }
     .cta::after { content:'↗'; font-size:1.1rem; }
-    #scene { min-height:560px; width:100%; position:relative; }
+    #scene { min-height:clamp(220px, calc(100vh - 350px), 560px); width:100%; max-width:760px; position:relative; }
     #scene canvas { display:block; width:100%; height:100%; }
     .services { background:#fff; padding:100px clamp(24px,5vw,76px); }
     .section-head { max-width:1440px; margin:0 auto 48px; display:flex; justify-content:space-between; gap:32px; align-items:end; }
@@ -42,14 +43,15 @@
     .number { color:var(--accent); font:600 1.5rem 'Space Grotesk',sans-serif; }
     .card h3 { font:600 1.45rem 'Space Grotesk',sans-serif; letter-spacing:-.04em; margin:40px 0 10px; }
     .card p { color:var(--muted); line-height:1.45; margin:0; font-size:.94rem; }
-    footer { padding:32px clamp(24px,5vw,76px); display:flex; justify-content:space-between; color:var(--muted); font-size:.82rem; }
+    footer { margin-top:auto; padding:20px clamp(24px,5vw,76px) 24px; display:flex; justify-content:center; text-align:center; color:var(--muted); font-size:.82rem; }
+    @media (min-width:851px) and (max-height:700px) { .hero { padding-top:74px; padding-bottom:18px; gap:4px; } h1 { font-size:clamp(3rem,7vh,4.8rem); margin-bottom:16px; } .tagline { font-size:1rem; margin-bottom:18px; } #scene { min-height:220px; } .cta { padding:11px 16px; } footer { padding:12px 24px 16px; } }
     @media (max-width:850px) { .hero { grid-template-columns:1fr; min-height:auto; padding-top:130px; } #scene { min-height:420px; order:-1; } h1 { max-width:550px; } .cards { grid-template-columns:repeat(2,1fr); } .section-head { display:block; } .section-head p { margin-top:18px; } }
     @media (max-width:520px) { nav { padding:22px 20px; } nav a { display:none; } .hero { padding-left:20px; padding-right:20px; } .services { padding:72px 20px; } .cards { grid-template-columns:1fr; } footer { padding:26px 20px; display:block; } footer span { display:block; margin-top:8px; } }
   </style>
 </head>
 <body>
   <main class="page">
-    <nav><div class="brand">L’Atelier <span>Roulant</span></div><a href="#services">Voir les services ↓</a></nav>
+    <nav><div class="brand">L’Atelier <span>Roulant</span></div></nav>
     <section class="hero" aria-labelledby="titre-principal">
       <div class="copy">
         <div class="eyebrow">Réparation · dépannage · réemploi</div>
@@ -59,16 +61,7 @@
       </div>
       <div id="scene" aria-label="Illustration 3D d’un atelier mobile"></div>
     </section>
-    <section class="services" id="services" aria-labelledby="titre-services">
-      <div class="section-head"><h2 id="titre-services">Une aide concrète,<br>chez vous.</h2><p>Du premier diagnostic à la remise en état, nous cherchons d’abord la solution la plus simple, utile et durable.</p></div>
-      <div class="cards">
-        <article class="card"><div class="number">01</div><div><h3>Électroménager</h3><p>Identifier la panne, évaluer la réparabilité et intervenir quand c’est possible.</p></div></article>
-        <article class="card"><div class="number">02</div><div><h3>Informatique & électronique</h3><p>Un coup de main pour comprendre, diagnostiquer et remettre en service vos appareils.</p></div></article>
-        <article class="card"><div class="number">03</div><div><h3>Maison & mobilier</h3><p>Petites réparations sur les meubles, murs, sols, plafonds et équipements du quotidien.</p></div></article>
-        <article class="card"><div class="number">04</div><div><h3>Débarras</h3><p>Enlever les encombrants et orienter ce qui peut encore être réemployé ou valorisé.</p></div></article>
-      </div>
-    </section>
-    <footer><strong>L’Atelier Roulant</strong><span>Réparer plutôt que remplacer</span></footer>
+    <footer><span>L'Atelier Roulant - Freddy Frouin - 0663222280 - 514914712 RCS Niort - freddy@linuxtribe.fr</span></footer>
   </main>
   <script type="module" src="js/main.js"></script>
 </body>
