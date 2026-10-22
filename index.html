@@ -31,6 +31,9 @@
     nav { display:flex; justify-content:space-between; align-items:center; padding:28px clamp(24px,5vw,76px); position:absolute; inset:0 0 auto; z-index:3; }
     .brand { font:700 1.05rem 'Space Grotesk',sans-serif; letter-spacing:-.03em; }
     .brand span { color:var(--accent); }
+    .site-qr-link { display:block; padding:6px; border:1px solid rgba(24,33,31,.16); border-radius:10px; background:#fff; box-shadow:0 10px 24px rgba(24,33,31,.12); transition:transform .2s ease, box-shadow .2s ease; }
+    .site-qr-link:hover { transform:translateY(-2px); box-shadow:0 14px 28px rgba(24,33,31,.18); }
+    .site-qr { display:block; width:76px; height:76px; }
     nav a { color:var(--ink); text-decoration:none; font-size:.9rem; font-weight:600; }
     .hero { flex:1; width:100%; min-height:0; position:relative; display:block; margin:0; padding:96px clamp(24px,5vw,76px) 40px; overflow:hidden; }
     .copy { position:relative; z-index:2; max-width:520px; margin-top:clamp(42px,8vh,110px); padding:28px 34px 30px; background:#f3f1e9; border:1px solid rgba(24,33,31,.12); border-radius:18px; box-shadow:0 18px 45px rgba(24,33,31,.12); text-align:justify; text-align-last:center; transition:opacity .8s ease, transform .8s ease; }
@@ -126,7 +129,7 @@
     footer { margin-top:auto; padding:20px clamp(24px,5vw,76px) 24px; display:flex; justify-content:center; text-align:center; color:var(--muted); font-size:.82rem; }
     @media (min-width:851px) and (max-height:700px) { .hero { padding-top:74px; padding-bottom:18px; gap:4px; } h1 { font-size:clamp(2.5rem,6vh,4rem); margin-bottom:16px; } .tagline { font-size:1rem; margin-bottom:18px; } #scene { min-height:220px; } .cta { padding:11px 16px; } footer { padding:12px 24px 16px; } }
     @media (max-width:850px) { .hero { grid-template-columns:1fr; min-height:auto; padding-top:130px; } #scene { min-height:420px; order:-1; } h1 { max-width:550px; } .cards { grid-template-columns:repeat(2,1fr); } .section-head { display:block; } .section-head p { margin-top:18px; } }
-    @media (max-width:520px) { nav { padding:22px 20px; } nav a { display:none; } .hero { padding-left:20px; padding-right:20px; } .services { padding:72px 20px; } .cards { grid-template-columns:1fr; } footer { padding:26px 20px; display:block; } footer span { display:block; margin-top:8px; } }
+    @media (max-width:520px) { nav { padding:22px 20px; } nav a { display:none; } .site-qr { width:62px; height:62px; } .hero { padding-left:20px; padding-right:20px; } .services { padding:72px 20px; } .cards { grid-template-columns:1fr; } footer { padding:26px 20px; display:block; } footer span { display:block; margin-top:8px; } }
   </style>
 </head>
 <body>
@@ -139,7 +142,7 @@
     </div>
   </div>
   <main class="page">
-    <nav><div class="brand">L’Atelier <span>Roulant</span></div></nav>
+    <nav><div class="brand">L’Atelier <span>Roulant</span></div><a class="site-qr-link" href="https://atelier-roulant.linuxtribe.fr" aria-label="Ouvrir le site L’Atelier Roulant"><img class="site-qr" src="assets/site-qr.png" alt="QR code du site L’Atelier Roulant"></a></nav>
     <section class="hero" aria-labelledby="titre-principal">
       <div class="copy">
         <div class="eyebrow">Réparation · dépannage · réemploi</div>
