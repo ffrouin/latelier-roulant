@@ -301,16 +301,45 @@ def _pdf_text(pdf_path):
 
 
 def _pdf_field(lines, label):
-    try:
-        index = lines.index(label)
-    except ValueError:
-        return ""
-    return lines[index + 1] if index + 1 < len(lines) else ""
+    labels = (
+        "DATE TIMESTAMP", "DATE", "BESOIN", "OBJET OU ÉQUIPEMENT", "DESCRIPTION",
+        "DISPONIBILITÉ", "URGENCE", "PHOTO JOINTE", "DOCUMENT EN LIGNE", "Référence",
+    )
+    for index, line in enumerate(lines):
+        position = line.find(label)
+        if position < 0:
+            continue
+        next_positions = [line.find(candidate, position + len(label)) for candidate in labels]
+        next_positions = [candidate for candidate in next_positions if candidate >= 0]
+        end = min(next_positions) if next_positions else len(line)
+        inline = line[position + len(label):end].strip()
+        if inline:
+            return inline
+        if index + 1 < len(lines):
+            value_line = lines[index + 1]
+            if next_positions:
+                return value_line[position:end].strip()
+            if position > 0:
+                return value_line[position:].strip()
+            return value_line.strip()
+    return ""
 
 
 def _pdf_location_parts(lines):
-    for line in lines:
-        match = re.search(r"\b(\d{5})\b(?:,\s*|\s+)([^,]+)$", line)
+    try:
+        request_index = lines.index("Votre demande")
+        header_lines = lines[:request_index]
+    except ValueError:
+        header_lines = lines
+    candidates = [line for line in header_lines if "," in line or re.search(r"\b\d{5}\b", line)]
+    if candidates:
+        location_line = candidates[-1]
+        parts = [part.strip() for part in location_line.split(",") if part.strip()]
+        if len(parts) >= 3:
+            return parts[-2], parts[-1]
+        if len(parts) == 2:
+            return "", parts[-1]
+        match = re.search(r"\b(\d{5})\b(?:\s+)([^,]+)$", location_line)
         if match:
             return match.group(1), match.group(2).strip()
     return "", ""
