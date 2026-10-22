@@ -58,6 +58,7 @@
     .service-option:hover, .service-option.is-selected { transform:translateY(-4px); border-color:var(--accent); background:#fffaf3; }
     .service-option strong { display:block; margin-bottom:12px; font:600 1.2rem 'Space Grotesk',sans-serif; letter-spacing:-.04em; }
     .service-option span { color:var(--muted); font-size:.88rem; line-height:1.35; }
+    .service-step-one.is-hidden { display:none; }
     .service-options.is-hidden { display:none; }
     .service-detail[hidden], .service-location[hidden], .service-summary[hidden] { display:none; }
     .service-detail h3, .service-location h3, .service-summary h3 { margin:0; font:700 clamp(2rem,4.5vw,4.4rem)/.92 'Space Grotesk',sans-serif; letter-spacing:-.07em; }
@@ -136,16 +137,18 @@
     </section>
     <section class="service-scene" id="service-scene" aria-labelledby="titre-services">
       <div class="service-content">
-        <div class="service-kicker">L’Atelier Roulant · étape 1</div>
-        <h2 id="titre-services">Pour quel besoin souhaitez-vous faire appel à nous&nbsp;?</h2>
-        <p class="service-intro">Choisissez la situation qui correspond le mieux à votre demande. Vous pourrez ensuite préciser le problème et joindre une photo si nécessaire.</p>
-        <div class="service-options" id="service-choice" role="list">
+        <div class="service-step-one" id="service-step-one">
+          <div class="service-kicker">L’Atelier Roulant · étape 1</div>
+          <h2 id="titre-services">Pour quel besoin souhaitez-vous faire appel à nous&nbsp;?</h2>
+          <p class="service-intro">Choisissez la situation qui correspond le mieux à votre demande. Vous pourrez ensuite préciser le problème et joindre une photo si nécessaire.</p>
+          <div class="service-options" id="service-choice" role="list">
           <button class="service-option" type="button" data-service="Électroménager"><strong>Électroménager</strong><span>Diagnostiquer et réparer vos appareils du quotidien.</span></button>
           <button class="service-option" type="button" data-service="Informatique & électronique"><strong>Informatique & électronique</strong><span>Comprendre une panne et remettre vos appareils en service.</span></button>
           <button class="service-option" type="button" data-service="Maison & mobilier"><strong>Maison & mobilier</strong><span>Réparer un meuble, un mur, un sol ou un plafond.</span></button>
           <button class="service-option" type="button" data-service="Débarras"><strong>Débarras</strong><span>Évacuer les encombrants et favoriser le réemploi.</span></button>
           <button class="service-option" type="button" data-service="Diagnostic"><strong>Diagnostic</strong><span>Vous ne savez pas encore quelle solution choisir.</span></button>
-          <button class="service-option" type="button" data-service="Autre demande"><strong>Autre demande</strong><span>Une situation qui ne rentre pas dans les catégories proposées.</span></button>
+            <button class="service-option" type="button" data-service="Autre demande"><strong>Autre demande</strong><span>Une situation qui ne rentre pas dans les catégories proposées.</span></button>
+          </div>
         </div>
         <div class="service-detail" id="service-detail" hidden>
           <div class="service-kicker">L’Atelier Roulant · étape 2</div>

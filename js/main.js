@@ -444,6 +444,7 @@ const offerButton = document.querySelector('.cta');
 const serviceScene = document.querySelector('#service-scene');
 const servicePanel = document.querySelector('.copy');
 const serviceSelection = document.querySelector('#service-selection');
+const serviceStepOne = document.querySelector('#service-step-one');
 const serviceChoice = document.querySelector('#service-choice');
 const serviceDetail = document.querySelector('#service-detail');
 const detailTitle = document.querySelector('#detail-title');
@@ -502,6 +503,7 @@ document.querySelector('#service-home-back').addEventListener('click', () => {
   serviceDetail.hidden = true;
   serviceLocation.hidden = true;
   serviceSummary.hidden = true;
+  serviceStepOne.classList.remove('is-hidden');
   serviceChoice.classList.remove('is-hidden');
   document.querySelectorAll('.service-option').forEach((option) => option.classList.remove('is-selected'));
 });
@@ -519,6 +521,7 @@ document.querySelectorAll('.service-option').forEach((option) => {
     detailDescription.value = '';
     detailFeedback.textContent = '';
     serviceSelection.textContent = `Besoin sélectionné : ${service}.`;
+    serviceStepOne.classList.add('is-hidden');
     serviceChoice.classList.add('is-hidden');
     serviceDetail.hidden = false;
   });
@@ -526,6 +529,7 @@ document.querySelectorAll('.service-option').forEach((option) => {
 document.querySelector('#detail-back').addEventListener('click', () => {
   serviceDetail.hidden = true;
   serviceLocation.hidden = true;
+  serviceStepOne.classList.remove('is-hidden');
   serviceChoice.classList.remove('is-hidden');
 });
 document.querySelector('#detail-next').addEventListener('click', () => {
