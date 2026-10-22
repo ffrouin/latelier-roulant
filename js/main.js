@@ -74,21 +74,28 @@ const lamp = new THREE.MeshStandardMaterial({ color: 0xffc875, emissive: 0x5b321
 // Marquage de carrosserie : le nom reprend le traitement noir/orange du site.
 const labelCanvas = document.createElement('canvas');
 labelCanvas.width = 1200;
-labelCanvas.height = 240;
+labelCanvas.height = 320;
 const labelContext = labelCanvas.getContext('2d');
 labelContext.clearRect(0, 0, labelCanvas.width, labelCanvas.height);
 labelContext.textBaseline = 'middle';
 labelContext.font = '700 92px Space Grotesk, Arial, sans-serif';
 labelContext.fillStyle = '#18211f';
-labelContext.fillText("L'Atelier", 34, 120);
+labelContext.fillText("L'Atelier", 34, 105);
 const firstWidth = labelContext.measureText("L'Atelier").width;
 labelContext.fillStyle = '#ee6b3b';
-labelContext.fillText('Roulant', 50 + firstWidth, 120);
+labelContext.fillText('Roulant', 50 + firstWidth, 105);
+labelContext.font = '600 64px Space Grotesk, Arial, sans-serif';
+let phoneX = 50;
+for (const [phonePart, color] of [['06 63 ', '#18211f'], ['22', '#ee6b3b'], [' ', '#18211f'], ['22', '#ee6b3b'], [' 80', '#18211f']]) {
+  labelContext.fillStyle = color;
+  labelContext.fillText(phonePart, phoneX, 235);
+  phoneX += labelContext.measureText(phonePart).width;
+}
 const labelTexture = new THREE.CanvasTexture(labelCanvas);
 labelTexture.colorSpace = THREE.SRGBColorSpace;
 const labelMaterial = new THREE.MeshBasicMaterial({ map: labelTexture, transparent: true, depthWrite: false });
-const sideLabel = new THREE.Mesh(new THREE.PlaneGeometry(3.0, 0.55), labelMaterial);
-sideLabel.position.set(0, 1.18, -1.085);
+const sideLabel = new THREE.Mesh(new THREE.PlaneGeometry(3.0, 0.8), labelMaterial);
+sideLabel.position.set(-0.58, 0.94, -1.085);
 sideLabel.rotation.y = Math.PI;
 sideLabel.renderOrder = 3;
 group.add(sideLabel);
