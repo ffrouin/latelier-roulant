@@ -1,6 +1,7 @@
 """Serveur HTTP local pour L’Atelier Roulant."""
 
 import base64
+from datetime import datetime
 import io
 import json
 import re
@@ -107,24 +108,26 @@ def make_pdf(data, document_url):
         "BT", "/F1 18 Tf", fill(orange), "45 645 Td", pdf_text("Votre demande"), "ET",
     ]
 
-    request_fields = [
-        ("Besoin", data.get("service")),
-        ("Objet ou équipement", data.get("object")),
-        ("Description", data.get("description")),
-        ("Disponibilité", data.get("availability")),
-        ("Urgence", data.get("urgency")),
-    ]
-    y = 616
-    for label, value in request_fields:
-        commands += ["BT", "/F1 9 Tf", fill(orange), f"55 {y} Td", pdf_text(label.upper()), "ET"]
+    def append_request_field(x, y, label, value, width):
+        commands.extend(["BT", "/F1 9 Tf", fill(orange), f"{x} {y} Td", pdf_text(label.upper()), "ET"])
         y -= 14
-        lines = wrap_lines(value, 55)
-        commands += ["BT", "/F1 11 Tf", fill(ink), f"55 {y} Td", pdf_text(lines[0]), "ET"]
+        lines = wrap_lines(value, width)
+        commands.extend(["BT", "/F1 11 Tf", fill(ink), f"{x} {y} Td", pdf_text(lines[0]), "ET"])
         y -= 16
         for line in lines[1:3]:
-            commands += ["BT", "/F1 10 Tf", fill(ink), f"65 {y} Td", pdf_text(line), "ET"]
+            commands.extend(["BT", "/F1 10 Tf", fill(ink), f"{x + 10} {y} Td", pdf_text(line), "ET"])
             y -= 14
-        y -= 6
+        return y - 6
+
+    append_request_field(55, 616, "DATE", data.get("created_at", "Date non précisée"), 55)
+    left_y = 576
+    left_y = append_request_field(55, left_y, "Besoin", data.get("service"), 38)
+    left_y = append_request_field(55, left_y, "Objet ou équipement", data.get("object"), 38)
+    append_request_field(55, left_y, "Description", data.get("description"), 38)
+
+    right_y = 576
+    right_y = append_request_field(330, right_y, "Disponibilité", data.get("availability"), 28)
+    append_request_field(330, right_y, "Urgence", data.get("urgency"), 28)
 
     objects = [
         b"<< /Type /Catalog /Pages 2 0 R >>",
@@ -214,6 +217,7 @@ def send_request_email(data, pdf_bytes, document_url):
     message.set_content(
         "Bonjour,\n\n"
         f"Une nouvelle demande a été confirmée par {data['firstname']} {data['lastname']}.\n"
+        f"Date et heure : {data['created_at']}\n"
         f"Référence : {data['request_id']}\n"
         f"Document en ligne : {document_url}\n\n"
         "La synthèse complète est jointe à ce courriel.\n"
@@ -281,6 +285,7 @@ class SiteHandler(SimpleHTTPRequestHandler):
             if not data.get("human_confirmed"):
                 raise ValueError("Confirmation humaine manquante")
             data["request_id"] = uuid.uuid4().hex[:12].upper()
+            data["created_at"] = datetime.now().astimezone().strftime("%d/%m/%Y à %H:%M")
             data["location"] = ", ".join(
                 value for value in (data.get("address"), data.get("postcode"), data.get("town")) if value
             )
