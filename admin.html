@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Administration · L’Atelier Roulant</title>
+  <style>
+    :root { color-scheme: light; --ink:#18211f; --muted:#66716d; --accent:#ed6b3b; --line:#e7e2dc; --paper:#f8f6f2; --card:#fff; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--paper); color:var(--ink); font-family:Inter,system-ui,-apple-system,sans-serif; }
+    main { width:min(1280px,100%); margin:0 auto; padding:38px 24px 56px; }
+    header { border-top:4px solid var(--accent); padding:20px 0 28px; display:flex; align-items:end; justify-content:space-between; gap:20px; }
+    h1 { margin:0; font-size:clamp(1.8rem,4vw,3rem); letter-spacing:-.04em; }
+    h2 { margin:0 0 16px; font-size:1rem; text-transform:uppercase; letter-spacing:.12em; color:var(--accent); }
+    p { color:var(--muted); }
+    button { border:0; background:var(--ink); color:#fff; padding:10px 15px; border-radius:5px; cursor:pointer; }
+    button:hover { background:var(--accent); }
+    .meta { color:var(--muted); font-size:.86rem; text-align:right; }
+    .cards { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:26px; }
+    .card, section { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:20px; }
+    .metric { font-size:2rem; font-weight:700; letter-spacing:-.05em; }
+    .metric-label { color:var(--muted); font-size:.82rem; margin-top:5px; }
+    .grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:18px; }
+    .bars { display:grid; gap:10px; }
+    .bar-row { display:grid; grid-template-columns:minmax(110px,1fr) 2fr 35px; align-items:center; gap:10px; font-size:.86rem; }
+    .bar { height:9px; background:#eeeae5; border-radius:99px; overflow:hidden; }
+    .bar i { display:block; height:100%; background:var(--accent); border-radius:inherit; }
+    .table-wrap { overflow:auto; }
+    table { width:100%; border-collapse:collapse; font-size:.87rem; }
+    th,td { text-align:left; padding:10px 8px; border-bottom:1px solid var(--line); white-space:nowrap; }
+    th { color:var(--muted); font-size:.73rem; text-transform:uppercase; letter-spacing:.08em; }
+    th button { background:transparent; color:inherit; padding:0; border-radius:0; font:inherit; text-transform:inherit; letter-spacing:inherit; }
+    th button:hover { color:var(--accent); background:transparent; }
+    .delete-link { color:#a22b20; background:transparent; border:0; padding:0; font:inherit; cursor:pointer; }
+    .delete-link:hover { color:var(--accent); text-decoration:underline; background:transparent; }
+    .empty { color:var(--muted); padding:12px 0; }
+    .error { color:#a22b20; background:#fff0ed; border:1px solid #f0c4ba; padding:12px; border-radius:5px; }
+    @media (max-width:850px) { .cards { grid-template-columns:repeat(2,1fr); } .grid { grid-template-columns:1fr; } header { align-items:start; flex-direction:column; } .meta { text-align:left; } }
+    @media (max-width:480px) { .cards { grid-template-columns:1fr 1fr; } main { padding:24px 14px 40px; } .card,section { padding:15px; } }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <div><h1>Administration</h1><p>Statistiques de L’Atelier Roulant</p></div>
+    <div><button id="refresh">Actualiser</button><div class="meta" id="updated">Chargement…</div></div>
+  </header>
+  <div id="error"></div>
+  <div class="cards">
+    <div class="card"><div class="metric" id="request-count">—</div><div class="metric-label">PDF de demandes</div></div>
+    <div class="card"><div class="metric" id="web-count">—</div><div class="metric-label">requêtes web depuis le démarrage</div></div>
+    <div class="card"><div class="metric" id="uptime">—</div><div class="metric-label">durée du processus</div></div>
+    <div class="card"><div class="metric" id="storage">—</div><div class="metric-label">stockage PDF</div></div>
+  </div>
+  <div class="grid">
+    <section><h2>Demandes par besoin</h2><div class="bars" id="services"></div></section>
+    <section><h2>Demandes par urgence</h2><div class="bars" id="urgencies"></div></section>
+    <section><h2>Disponibilités</h2><div class="bars" id="availability"></div></section>
+    <section><h2>Trafic web</h2><div class="bars" id="web-breakdown"></div></section>
+  </div>
+  <section><h2>PDF analysés dans le dossier de demandes</h2><div class="table-wrap"><table><thead><tr><th><button data-sort="reference">Référence ↕</button></th><th><button data-sort="date">Date ↕</button></th><th><button data-sort="postcode">CODE POSTAL ↕</button></th><th><button data-sort="town">COMMUNE ↕</button></th><th><button data-sort="service">Besoin ↕</button></th><th><button data-sort="availability">Disponibilité ↕</button></th><th><button data-sort="urgency">Urgence ↕</button></th><th><button data-sort="size_bytes">Taille ↕</button></th><th>Actions</th></tr></thead><tbody id="requests"></tbody></table></div></section>
+</main>
+<script>
+  const number = new Intl.NumberFormat('fr-FR');
+  let requestItems = [];
+  let sortKey = 'date';
+  let sortDirection = -1;
+  const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const fmtBytes = bytes => bytes < 1024 ? `${bytes} o` : bytes < 1048576 ? `${(bytes/1024).toFixed(1)} Ko` : `${(bytes/1048576).toFixed(2)} Mo`;
+  const fmtDuration = seconds => { const d=Math.floor(seconds/86400), h=Math.floor(seconds%86400/3600), m=Math.floor(seconds%3600/60); return d ? `${d}j ${h}h` : h ? `${h}h ${m}m` : `${m}m`; };
+  function bars(target, values) {
+    const entries=Object.entries(values||{}), max=Math.max(1,...entries.map(([,v])=>v));
+    document.getElementById(target).innerHTML=entries.length ? entries.map(([label,value]) => `<div class="bar-row"><span>${esc(label)}</span><span class="bar"><i style="width:${(value/max)*100}%"></i></span><b>${number.format(value)}</b></div>`).join('') : '<div class="empty">Aucune donnée</div>';
+  }
+  function renderRequests() {
+    const rows = [...requestItems].sort((a,b) => {
+      const left = a[sortKey] ?? '', right = b[sortKey] ?? '';
+      const result = typeof left === 'number' && typeof right === 'number' ? left - right : String(left).localeCompare(String(right), 'fr', {numeric:true, sensitivity:'base'});
+      return result * sortDirection;
+    });
+    document.getElementById('requests').innerHTML = rows.length ? rows.map(item => `<tr><td>${esc(item.reference)}</td><td>${esc(item.date||item.modified_at)}</td><td>${esc(item.postcode)}</td><td>${esc(item.town)}</td><td>${esc(item.service)}</td><td>${esc(item.availability)}</td><td>${esc(item.urgency)}</td><td>${fmtBytes(item.size_bytes)}</td><td><a href="/requests/${encodeURIComponent(item.reference)}.pdf" target="_blank" rel="noopener">ouvrir</a> · <button class="delete-link" data-delete="${esc(item.reference)}">supprimer</button></td></tr>`).join('') : '<tr><td colspan="9" class="empty">Aucun PDF trouvé.</td></tr>';
+    document.querySelectorAll('[data-delete]').forEach(button => button.addEventListener('click', deleteRequest));
+  }
+  async function deleteRequest(event) {
+    const reference = event.currentTarget.dataset.delete;
+    if (!confirm(`Supprimer définitivement le PDF ${reference} ?`)) return;
+    const response = await fetch('/api/admin/delete-request', {method:'POST', headers:{'Content-Type':'application/json','X-Admin-Action':'delete-request'}, body:JSON.stringify({reference})});
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) { document.getElementById('error').innerHTML=`<div class="error">Suppression impossible : ${esc(payload.error || `Erreur HTTP ${response.status}`)}</div>`; return; }
+    await load();
+  }
+  function render(data) {
+    const r=data.requests, w=data.web;
+    document.getElementById('request-count').textContent=number.format(r.count);
+    document.getElementById('web-count').textContent=number.format(w.total_requests);
+    document.getElementById('uptime').textContent=fmtDuration(data.uptime_seconds);
+    document.getElementById('storage').textContent=fmtBytes(r.total_bytes);
+    document.getElementById('updated').textContent=`Mis à jour ${new Date(data.generated_at).toLocaleString('fr-FR')}`;
+    bars('services',r.by_service); bars('urgencies',r.by_urgency); bars('availability',r.by_availability);
+    bars('web-breakdown',{...w.by_path});
+    requestItems = r.items || [];
+    renderRequests();
+  }
+  document.querySelectorAll('[data-sort]').forEach(button => button.addEventListener('click', () => { const nextKey=button.dataset.sort; if(sortKey===nextKey) sortDirection*=-1; else { sortKey=nextKey; sortDirection=1; } renderRequests(); }));
+  async function load() {
+    const error=document.getElementById('error'); error.innerHTML='';
+    try { const response=await fetch('/api/admin/stats',{cache:'no-store'}); if(!response.ok) throw new Error(`Erreur HTTP ${response.status}`); render(await response.json()); }
+    catch (e) { error.innerHTML=`<div class="error">Impossible de charger les statistiques : ${esc(e.message)}</div>`; }
+  }
+  document.getElementById('refresh').addEventListener('click',load); load(); setInterval(load,30000);
+</script>
+</body>
+</html>

@@ -2,6 +2,7 @@
 
 import base64
 from datetime import datetime
+import hmac
 import io
 import json
 import re
@@ -9,6 +10,8 @@ import shutil
 import smtplib
 import subprocess
 import textwrap
+import threading
+import time
 import uuid
 import zlib
 from email.message import EmailMessage
@@ -24,6 +27,17 @@ SMTP_HOST = environ.get("SMTP_HOST", "cgpro.linuxtribe.fr")
 SMTP_USERNAME = environ.get("SMTP_USERNAME", OWNER_EMAIL)
 PUBLIC_BASE_URL = environ.get("PUBLIC_BASE_URL", "https://atelier-roulant.linuxtribe.fr").rstrip("/")
 REQUEST_STORAGE_DIR = Path(environ.get("REQUEST_STORAGE_DIR", ROOT / "data" / "requests"))
+ADMIN_USERNAME = environ.get("ADMIN_USERNAME", "admin")
+ADMIN_PASSWORD = environ.get("ADMIN_PASSWORD", "")
+SERVER_STARTED_AT = time.time()
+WEB_STATS_LOCK = threading.Lock()
+WEB_STATS = {
+    "total_requests": 0,
+    "by_method": {},
+    "by_path": {},
+    "by_status": {},
+    "bytes_sent": 0,
+}
 
 
 def pdf_text(value):
@@ -273,6 +287,95 @@ def send_request_email(data, pdf_bytes, document_url):
             smtp.send_message(message)
 
 
+def _pdf_text(pdf_path):
+    if not shutil.which("pdftotext"):
+        return ""
+    result = subprocess.run(
+        ["pdftotext", "-layout", str(pdf_path), "-"],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=5,
+    )
+    return result.stdout if result.returncode == 0 else ""
+
+
+def _pdf_field(lines, label):
+    try:
+        index = lines.index(label)
+    except ValueError:
+        return ""
+    return lines[index + 1] if index + 1 < len(lines) else ""
+
+
+def _pdf_location_parts(lines):
+    for line in lines:
+        match = re.search(r"\b(\d{5})\b(?:,\s*|\s+)([^,]+)$", line)
+        if match:
+            return match.group(1), match.group(2).strip()
+    return "", ""
+
+
+def collect_admin_stats():
+    """Return process web counters and metadata extracted from stored request PDFs."""
+    request_rows = []
+    scan_errors = 0
+    if REQUEST_STORAGE_DIR.is_dir():
+        pdf_paths = sorted(REQUEST_STORAGE_DIR.glob("[A-F0-9][A-F0-9][A-F0-9][A-F0-9][A-F0-9][A-F0-9][A-F0-9][A-F0-9][A-F0-9][A-F0-9][A-F0-9][A-F0-9].pdf"))
+    else:
+        pdf_paths = []
+    for pdf_path in pdf_paths:
+        try:
+            text = _pdf_text(pdf_path)
+            lines = [line.strip() for line in text.splitlines() if line.strip()]
+            modified_at = datetime.fromtimestamp(pdf_path.stat().st_mtime).astimezone().isoformat(timespec="seconds")
+            postcode, town = _pdf_location_parts(lines)
+            request_rows.append({
+                "reference": pdf_path.stem,
+                "date": _pdf_field(lines, "DATE") or _pdf_field(lines, "DATE TIMESTAMP") or modified_at,
+                "service": _pdf_field(lines, "BESOIN"),
+                "availability": _pdf_field(lines, "DISPONIBILITÉ"),
+                "urgency": _pdf_field(lines, "URGENCE"),
+                "postcode": postcode,
+                "town": town,
+                "size_bytes": pdf_path.stat().st_size,
+                "modified_at": modified_at,
+            })
+        except (OSError, subprocess.SubprocessError):
+            scan_errors += 1
+
+    with WEB_STATS_LOCK:
+        web = {
+            "total_requests": WEB_STATS["total_requests"],
+            "by_method": dict(WEB_STATS["by_method"]),
+            "by_path": dict(WEB_STATS["by_path"]),
+            "by_status": dict(WEB_STATS["by_status"]),
+            "bytes_sent": WEB_STATS["bytes_sent"],
+        }
+    def count_by(field):
+        values = {}
+        for row in request_rows:
+            value = row[field] or "Non précisé"
+            values[value] = values.get(value, 0) + 1
+        return dict(sorted(values.items(), key=lambda item: (-item[1], item[0])))
+
+    return {
+        "generated_at": datetime.now().astimezone().isoformat(timespec="seconds"),
+        "server_started_at": datetime.fromtimestamp(SERVER_STARTED_AT).astimezone().isoformat(timespec="seconds"),
+        "uptime_seconds": round(time.time() - SERVER_STARTED_AT),
+        "web": web,
+        "requests": {
+            "count": len(request_rows),
+            "total_bytes": sum(row["size_bytes"] for row in request_rows),
+            "scan_errors": scan_errors,
+            "by_service": count_by("service"),
+            "by_availability": count_by("availability"),
+            "by_urgency": count_by("urgency"),
+            "items": list(reversed(request_rows[-200:])),
+        },
+    }
+
+
 class SiteHandler(SimpleHTTPRequestHandler):
     """Sert les fichiers statiques et les demandes PDF."""
 
@@ -283,8 +386,45 @@ class SiteHandler(SimpleHTTPRequestHandler):
         self.send_header("Cache-Control", "no-cache")
         super().end_headers()
 
+    def log_request(self, code="-", size="-"):
+        path = urlparse(self.path).path[:160]
+        status = str(code)
+        sent = int(size) if str(size).isdigit() else 0
+        with WEB_STATS_LOCK:
+            WEB_STATS["total_requests"] += 1
+            WEB_STATS["bytes_sent"] += sent
+            WEB_STATS["by_method"][self.command] = WEB_STATS["by_method"].get(self.command, 0) + 1
+            WEB_STATS["by_path"][path] = WEB_STATS["by_path"].get(path, 0) + 1
+            WEB_STATS["by_status"][status] = WEB_STATS["by_status"].get(status, 0) + 1
+        super().log_request(code, size)
+
+    def _require_admin(self):
+        if not ADMIN_PASSWORD:
+            self.send_error(404)
+            return False
+        authorization = self.headers.get("Authorization", "")
+        expected = base64.b64encode(f"{ADMIN_USERNAME}:{ADMIN_PASSWORD}".encode()).decode()
+        if not hmac.compare_digest(authorization, f"Basic {expected}"):
+            self.send_response(401)
+            self.send_header("WWW-Authenticate", 'Basic realm="L\'Atelier Roulant administration"')
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return False
+        return True
+
     def do_GET(self):
         path = urlparse(self.path).path
+        if path in {"/admin", "/admin/", "/admin.html"}:
+            if not self._require_admin():
+                return
+            self.path = "/admin.html"
+            super().do_GET()
+            return
+        if path == "/api/admin/stats":
+            if not self._require_admin():
+                return
+            self.respond_json(200, collect_admin_stats())
+            return
         match = re.fullmatch(r"/requests/([A-F0-9]{12})\.pdf", path)
         if match:
             pdf_path = REQUEST_STORAGE_DIR / f"{match.group(1)}.pdf"
@@ -302,7 +442,33 @@ class SiteHandler(SimpleHTTPRequestHandler):
         super().do_GET()
 
     def do_POST(self):
-        if urlparse(self.path).path != "/api/submit-request":
+        path = urlparse(self.path).path
+        if path == "/api/admin/delete-request":
+            if not self._require_admin():
+                return
+            if self.headers.get("X-Admin-Action") != "delete-request":
+                self.respond_json(403, {"ok": False, "error": "Action d’administration non autorisée"})
+                return
+            try:
+                length = int(self.headers.get("Content-Length", "0"))
+                if length > 2_000:
+                    raise ValueError("Requête trop volumineuse")
+                payload = json.loads(self.rfile.read(length))
+                reference = str(payload.get("reference", "")).upper()
+                if not re.fullmatch(r"[A-F0-9]{12}", reference):
+                    raise ValueError("Référence de demande invalide")
+                pdf_path = REQUEST_STORAGE_DIR / f"{reference}.pdf"
+                if not pdf_path.is_file():
+                    self.respond_json(404, {"ok": False, "error": "PDF introuvable"})
+                    return
+                pdf_path.unlink()
+                self.respond_json(200, {"ok": True, "reference": reference})
+            except (ValueError, json.JSONDecodeError) as error:
+                self.respond_json(400, {"ok": False, "error": str(error)})
+            except OSError as error:
+                self.respond_json(503, {"ok": False, "error": str(error)})
+            return
+        if path != "/api/submit-request":
             self.send_error(404)
             return
         try:

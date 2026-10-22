@@ -47,12 +47,22 @@ export SMTP_FROM="freddy@linuxtribe.fr"
 export SMTP_STARTTLS="1"
 export PUBLIC_BASE_URL="https://atelier-roulant.linuxtribe.fr"
 export REQUEST_STORAGE_DIR="/var/lib/latelier-roulant/requests"
+export ADMIN_USERNAME="admin"
+export ADMIN_PASSWORD="mot-de-passe-admin-fort-et-hors-du-depot"
 python3 app.py
 ```
 
 `SMTP_PASSWORD` ne doit pas être inscrit dans le dépôt. Sans configuration
 SMTP complète, l’interface signale que l’envoi n’est pas disponible et permet
 de réessayer après configuration du serveur.
+
+### Administration
+
+La page `/admin` est protégée par une authentification HTTP Basic. Elle est
+désactivée si `ADMIN_PASSWORD` n’est pas défini. Elle affiche les compteurs web
+depuis le démarrage du processus et analyse les PDF présents dans
+`REQUEST_STORAGE_DIR` pour présenter le nombre de demandes, les répartitions
+par besoin/disponibilité/urgence, le tri de chaque colonne et la liste des documents. Chaque ligne permet d’ouvrir le PDF ou de le supprimer après confirmation. La suppression est protégée par l’authentification administrateur et agit uniquement sur le fichier PDF runtime. Le mot de passe administrateur doit rester dans l’environnement systemd ou nginx, jamais dans Git. Les compteurs web sont remis à zéro lors d’un redémarrage du service.
 
 Le port `587` est utilisé avec STARTTLS par défaut. Le port `465` est aussi
 possible avec `SMTP_SSL="1"`.
@@ -70,6 +80,7 @@ Avec un service systemd utilisant `ProtectSystem=strict`, ajoutez également
 .
 ├── app.py          # Serveur HTTP Python minimal
 ├── index.html      # Structure et styles de la page d’accueil
+├── admin.html      # Tableau de bord protégé des statistiques
 └── js/main.js      # Scène Three.js et interactions visuelles
 ```
 
