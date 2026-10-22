@@ -59,8 +59,8 @@
     .service-option strong { display:block; margin-bottom:12px; font:600 1.2rem 'Space Grotesk',sans-serif; letter-spacing:-.04em; }
     .service-option span { color:var(--muted); font-size:.88rem; line-height:1.35; }
     .service-options.is-hidden { display:none; }
-    .service-detail[hidden], .service-location[hidden] { display:none; }
-    .service-detail h3, .service-location h3 { margin:0; font:700 clamp(2rem,4.5vw,4.4rem)/.92 'Space Grotesk',sans-serif; letter-spacing:-.07em; }
+    .service-detail[hidden], .service-location[hidden], .service-summary[hidden] { display:none; }
+    .service-detail h3, .service-location h3, .service-summary h3 { margin:0; font:700 clamp(2rem,4.5vw,4.4rem)/.92 'Space Grotesk',sans-serif; letter-spacing:-.07em; }
     .detail-fields { display:grid; grid-template-columns:1fr 1fr; gap:16px; max-width:760px; }
     .detail-fields label { display:flex; flex-direction:column; gap:8px; color:var(--ink); font-size:.86rem; font-weight:600; }
     .detail-fields label:nth-child(2) { grid-column:1 / -1; }
@@ -69,10 +69,22 @@
     .detail-next { border:0; padding:13px 18px; color:#fff; background:var(--ink); cursor:pointer; font:600 .86rem 'DM Sans',sans-serif; }
     .detail-next:hover { background:var(--accent); }
     .detail-feedback { min-height:22px; margin-top:14px; color:var(--accent); font-size:.86rem; }
+    .summary-grid { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:1px; max-width:760px; margin-top:30px; background:var(--line); border:1px solid var(--line); }
+    .summary-grid div { min-height:82px; padding:16px; background:#fff; }
+    .summary-grid span { display:block; margin-bottom:8px; color:var(--muted); font-size:.76rem; text-transform:uppercase; letter-spacing:.08em; }
+    .summary-grid strong { display:block; color:var(--ink); font:600 1rem 'Space Grotesk',sans-serif; white-space:pre-wrap; }
+    .summary-layout { display:grid; grid-template-columns:minmax(0,1.4fr) minmax(220px,.6fr); gap:22px; align-items:start; margin-top:30px; }
+    .summary-layout .summary-grid { margin-top:0; }
+    .summary-photo-preview { min-width:0; }
+    .summary-photo-preview > span { display:block; margin-bottom:8px; color:var(--muted); font-size:.76rem; text-transform:uppercase; letter-spacing:.08em; }
+    .photo-frame { display:grid; place-items:center; min-height:250px; overflow:hidden; border:1px dashed var(--line); background:rgba(255,255,255,.42); color:var(--muted); }
+    .photo-frame img { display:block; width:100%; height:250px; object-fit:cover; }
+    .photo-frame strong { padding:20px; font:500 .95rem 'Space Grotesk',sans-serif; }
     .service-footer { display:flex; align-items:center; justify-content:space-between; gap:24px; margin-top:26px; color:var(--muted); font-size:.86rem; }
     .service-back { border:0; padding:0; color:var(--ink); background:none; cursor:pointer; font:600 .86rem 'DM Sans',sans-serif; }
     @media (max-width:850px) { .service-options { grid-template-columns:repeat(2,1fr); } }
-    @media (max-width:520px) { .service-scene { overflow:auto; align-items:start; padding-top:110px; } .service-options { grid-template-columns:1fr; } .service-option { min-height:auto; } .service-footer { align-items:flex-start; flex-direction:column-reverse; } .detail-fields { grid-template-columns:1fr; } .detail-fields label:nth-child(2) { grid-column:auto; } }
+    @media (max-width:720px) { .summary-layout { grid-template-columns:1fr; } }
+    @media (max-width:520px) { .service-scene { overflow:auto; align-items:start; padding-top:110px; } .service-options { grid-template-columns:1fr; } .service-option { min-height:auto; } .service-footer { align-items:flex-start; flex-direction:column-reverse; } .detail-fields { grid-template-columns:1fr; } .detail-fields label:nth-child(2) { grid-column:auto; } .summary-grid { grid-template-columns:1fr; } }
     .services { background:#fff; padding:100px clamp(24px,5vw,76px); }
     .section-head { max-width:1440px; margin:0 auto 48px; display:flex; justify-content:space-between; gap:32px; align-items:end; }
     .section-head h2 { font:600 clamp(2.4rem,5vw,4.8rem)/.95 'Space Grotesk',sans-serif; letter-spacing:-.06em; margin:0; }
@@ -138,6 +150,10 @@
           <h3>Où devons-nous intervenir&nbsp;?</h3>
           <p class="service-intro">Ces informations nous permettront d’évaluer le déplacement et de vous proposer un créneau adapté.</p>
           <div class="detail-fields">
+            <label><span>Nom</span><input id="contact-lastname" type="text" autocomplete="family-name" placeholder="Votre nom"></label>
+            <label><span>Prénom</span><input id="contact-firstname" type="text" autocomplete="given-name" placeholder="Votre prénom"></label>
+            <label><span>Téléphone</span><input id="contact-phone" type="tel" autocomplete="tel" placeholder="06 00 00 00 00"></label>
+            <label><span>Courriel</span><input id="contact-email" type="email" autocomplete="email" placeholder="vous@exemple.fr"></label>
             <label><span>Commune</span><input id="location-town" type="text" placeholder="Ex. Niort, Cherveux, Augé…"></label>
             <label><span>Code postal</span><input id="location-postcode" type="text" inputmode="numeric" placeholder="Ex. 79000"></label>
             <label><span>Adresse ou quartier</span><input id="location-address" type="text" placeholder="Adresse, lieu-dit ou quartier"></label>
@@ -147,6 +163,32 @@
           </div>
           <div class="service-footer"><button class="service-back" id="location-back" type="button">← Modifier le besoin</button><button class="detail-next" id="location-next" type="button">Voir le récapitulatif →</button></div>
           <div class="detail-feedback" id="location-feedback" aria-live="polite"></div>
+        </div>
+        <div class="service-summary" id="service-summary" hidden>
+          <div class="service-kicker">L’Atelier Roulant · étape 4</div>
+          <h3>Voici votre demande</h3>
+          <p class="service-intro">Vérifiez les informations avant de poursuivre vers vos coordonnées.</p>
+          <div class="summary-layout">
+          <div class="summary-grid">
+            <div><span>Besoin</span><strong id="summary-service">—</strong></div>
+            <div><span>Objet ou équipement</span><strong id="summary-object">—</strong></div>
+            <div><span>Description</span><strong id="summary-description">—</strong></div>
+            <div><span>Lieu</span><strong id="summary-location">—</strong></div>
+            <div><span>Accès particulier</span><strong id="summary-access">—</strong></div>
+            <div><span>Disponibilité</span><strong id="summary-availability">—</strong></div>
+            <div><span>Urgence</span><strong id="summary-urgency">—</strong></div>
+            <div><span>Photo</span><strong id="summary-photo">—</strong></div>
+            <div><span>Nom et prénom</span><strong id="summary-name">—</strong></div>
+            <div><span>Téléphone</span><strong id="summary-phone">—</strong></div>
+            <div><span>Courriel</span><strong id="summary-email">—</strong></div>
+          </div>
+          <aside class="summary-photo-preview" aria-label="Aperçu de la photo jointe">
+            <span>Photo jointe</span>
+            <div class="photo-frame"><img id="summary-photo-image" alt="Aperçu de la photo sélectionnée" hidden><strong id="summary-photo-empty">Aucune photo</strong></div>
+          </aside>
+          </div>
+          <div class="service-footer"><button class="service-back" id="summary-back" type="button">← Modifier le lieu</button><button class="detail-next" id="summary-confirm" type="button">Confirmer le récapitulatif →</button></div>
+          <div class="detail-feedback" id="summary-feedback" aria-live="polite"></div>
         </div>
         <div class="service-footer"><button class="service-back" id="service-home-back" type="button">← Retour à l’accueil</button><span id="service-selection">Sélectionnez une catégorie pour continuer.</span></div>
       </div>

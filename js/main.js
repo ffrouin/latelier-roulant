@@ -427,6 +427,8 @@ const detailDescription = document.querySelector('#detail-description');
 const detailFeedback = document.querySelector('#detail-feedback');
 const serviceLocation = document.querySelector('#service-location');
 const locationFeedback = document.querySelector('#location-feedback');
+const serviceSummary = document.querySelector('#service-summary');
+const summaryFeedback = document.querySelector('#summary-feedback');
 const detailCopy = {
   'Électroménager': ['Quel appareil souhaitez-vous faire réparer ?', 'Indiquez l’appareil concerné et décrivez la panne constatée.', 'Appareil ou équipement', 'Ex. lave-linge, four, réfrigérateur…'],
   'Informatique & électronique': ['Quel appareil faut-il remettre en service ?', 'Précisez l’équipement, le symptôme et les éventuels messages d’erreur.', 'Appareil ou équipement', 'Ex. ordinateur portable, écran, imprimante…'],
@@ -448,6 +450,7 @@ document.querySelector('#service-home-back').addEventListener('click', () => {
   serviceSelection.textContent = 'Sélectionnez une catégorie pour continuer.';
   serviceDetail.hidden = true;
   serviceLocation.hidden = true;
+  serviceSummary.hidden = true;
   serviceChoice.classList.remove('is-hidden');
   document.querySelectorAll('.service-option').forEach((option) => option.classList.remove('is-selected'));
 });
@@ -485,16 +488,61 @@ document.querySelector('#detail-next').addEventListener('click', () => {
 });
 document.querySelector('#location-back').addEventListener('click', () => {
   serviceLocation.hidden = true;
+  serviceSummary.hidden = true;
   serviceDetail.hidden = false;
 });
 document.querySelector('#location-next').addEventListener('click', () => {
   const town = document.querySelector('#location-town').value.trim();
   const availability = document.querySelector('#location-availability').value;
-  if (!town || !availability) {
-    locationFeedback.textContent = 'Indiquez au moins la commune et une disponibilité.';
+  const lastname = document.querySelector('#contact-lastname').value.trim();
+  const firstname = document.querySelector('#contact-firstname').value.trim();
+  const phone = document.querySelector('#contact-phone').value.trim();
+  const email = document.querySelector('#contact-email').value.trim();
+  if (!town || !availability || !lastname || !firstname || !phone || !email) {
+    locationFeedback.textContent = 'Indiquez la commune, une disponibilité et vos coordonnées.';
     return;
   }
-  locationFeedback.textContent = 'Lieu et disponibilité enregistrés pour le récapitulatif.';
+  if (!email.includes('@')) {
+    locationFeedback.textContent = 'Vérifiez votre adresse courriel.';
+    return;
+  }
+  locationFeedback.textContent = '';
+  document.querySelector('#summary-service').textContent = serviceSelection.textContent.replace('Besoin sélectionné : ', '').replace(/\.$/, '');
+  document.querySelector('#summary-object').textContent = detailObject.value.trim() || 'Non précisé';
+  document.querySelector('#summary-description').textContent = detailDescription.value.trim() || 'Non précisée';
+  const address = document.querySelector('#location-address').value.trim();
+  const postcode = document.querySelector('#location-postcode').value.trim();
+  const access = document.querySelector('#location-access').value.trim();
+  const photo = document.querySelector('#detail-photo').files[0]?.name;
+  document.querySelector('#summary-location').textContent = [address, postcode, town].filter(Boolean).join(', ');
+  document.querySelector('#summary-access').textContent = access || 'Aucune précision';
+  document.querySelector('#summary-availability').textContent = availability;
+  document.querySelector('#summary-urgency').textContent = document.querySelector('#location-urgency').value || 'Non précisée';
+  document.querySelector('#summary-photo').textContent = photo || 'Aucune photo ajoutée';
+  document.querySelector('#summary-name').textContent = `${firstname} ${lastname}`;
+  document.querySelector('#summary-phone').textContent = phone;
+  document.querySelector('#summary-email').textContent = email;
+  const photoImage = document.querySelector('#summary-photo-image');
+  const photoEmpty = document.querySelector('#summary-photo-empty');
+  if (document.querySelector('#detail-photo').files[0]) {
+    photoImage.src = URL.createObjectURL(document.querySelector('#detail-photo').files[0]);
+    photoImage.hidden = false;
+    photoEmpty.hidden = true;
+  } else {
+    photoImage.removeAttribute('src');
+    photoImage.hidden = true;
+    photoEmpty.hidden = false;
+  }
+  summaryFeedback.textContent = '';
+  serviceLocation.hidden = true;
+  serviceSummary.hidden = false;
+});
+document.querySelector('#summary-back').addEventListener('click', () => {
+  serviceSummary.hidden = true;
+  serviceLocation.hidden = false;
+});
+document.querySelector('#summary-confirm').addEventListener('click', () => {
+  summaryFeedback.textContent = 'Récapitulatif confirmé. L’étape suivante recueillera vos coordonnées.';
 });
 requestAnimationFrame(animate);
 window.setTimeout(revealWelcome, 700);
