@@ -1,0 +1,2 @@
+# PDF requests are runtime data and must not enter Git.
+data/requests/

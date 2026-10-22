@@ -608,12 +608,43 @@ humanTarget.addEventListener('click', () => {
   }
   moveHumanTarget();
 });
+function preparePhotoData(file) {
+  if (!file) return Promise.resolve('');
+  return new Promise((resolve, reject) => {
+    const objectUrl = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = () => {
+      const maxDimension = 1200;
+      const scale = Math.min(1, maxDimension / Math.max(image.naturalWidth, image.naturalHeight));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+      canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+      canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(objectUrl);
+      resolve(canvas.toDataURL('image/jpeg', 0.78));
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error('La photo sélectionnée ne peut pas être préparée.'));
+    };
+    image.src = objectUrl;
+  });
+}
 humanContinue.addEventListener('click', async () => {
   if (humanGameRound < 3) return;
   humanContinue.disabled = true;
   humanContinue.textContent = 'Génération et envoi en cours…';
   humanFeedback.textContent = 'Préparation du PDF et envoi du courriel…';
   const photoFile = document.querySelector('#detail-photo').files[0];
+  let photoData = '';
+  try {
+    photoData = await preparePhotoData(photoFile);
+  } catch (error) {
+    humanContinue.disabled = false;
+    humanContinue.textContent = 'Réessayer l’envoi →';
+    humanFeedback.textContent = error.message;
+    return;
+  }
   const payload = {
     service: serviceSelection.textContent.replace('Besoin sélectionné : ', '').replace(/\.$/, ''),
     object: detailObject.value.trim(),
@@ -628,6 +659,7 @@ humanContinue.addEventListener('click', async () => {
     firstname: document.querySelector('#contact-firstname').value.trim(),
     phone: document.querySelector('#contact-phone').value.trim(),
     photo_name: photoFile?.name || '',
+    photo_data: photoData,
     human_confirmed: true,
   };
   try {

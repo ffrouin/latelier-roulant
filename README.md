@@ -45,6 +45,8 @@ export SMTP_USERNAME="freddy@linuxtribe.fr"
 export SMTP_PASSWORD="mot-de-passe-fourni-par-le-fournisseur"
 export SMTP_FROM="freddy@linuxtribe.fr"
 export SMTP_STARTTLS="1"
+export PUBLIC_BASE_URL="https://atelier-roulant.linuxtribe.fr"
+export REQUEST_STORAGE_DIR="/var/lib/latelier-roulant/requests"
 python3 app.py
 ```
 
@@ -54,6 +56,13 @@ de réessayer après configuration du serveur.
 
 Le port `587` est utilisé avec STARTTLS par défaut. Le port `465` est aussi
 possible avec `SMTP_SSL="1"`.
+
+La génération du PDF enrichi utilise Pillow et `qrencode` pour intégrer la
+photo envoyée et le QR code. Le compte du service doit pouvoir écrire dans
+`REQUEST_STORAGE_DIR`, qui contient les PDF accessibles par leur référence.
+Avec un service systemd utilisant `ProtectSystem=strict`, ajoutez également
+`ReadWritePaths=/var/lib/latelier-roulant/requests` dans la section
+`[Service]`.
 
 ## Structure
 
