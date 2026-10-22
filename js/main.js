@@ -5,7 +5,7 @@ const mount = document.querySelector('#scene');
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(28, 1, 0.1, 100);
 const cameraTarget = new THREE.Vector3(0, 1.45, -1.1);
-const cameraDirection = new THREE.Vector3(7.2, 5.2, 11.5).sub(cameraTarget).normalize();
+const cameraDirection = new THREE.Vector3(7.2, 3.7, 11.5).sub(cameraTarget).normalize();
 let cameraDistance = 15;
 let orbitAzimuth = Math.atan2(cameraDirection.x, cameraDirection.z);
 let orbitElevation = Math.asin(cameraDirection.y);
@@ -202,6 +202,60 @@ worldBox([0.22, 0.85, 0.05], [2.05, 1.45, -3.12], darkGlass);
 worldBox([0.18, 1.0, 0.08], [2.05, 4.55, -2.72], roof);
 worldBox([0.8, 0.12, 0.08], [2.05, 4.55, -2.72], roof);
 
+// Panneau d’entrée de commune : le nom change régulièrement dans la scène.
+const communeNames = [
+  'La Châpelle Bâton',
+  'Saint-Christophe-sur-Roc',
+  'Champdeniers',
+  'Cherveux',
+  'Augé',
+  'La Crêche',
+  'Azay-le-Brûle',
+];
+const communeCanvas = document.createElement('canvas');
+communeCanvas.width = 1400;
+communeCanvas.height = 500;
+const communeContext = communeCanvas.getContext('2d');
+const communeTexture = new THREE.CanvasTexture(communeCanvas);
+communeTexture.colorSpace = THREE.SRGBColorSpace;
+const communeMaterial = new THREE.MeshBasicMaterial({ map: communeTexture, transparent: true, side: THREE.DoubleSide });
+const communeSign = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 0.5), communeMaterial);
+communeSign.position.set(4.9, 1.2, 4.3);
+communeSign.rotation.y = -0.28;
+scene.add(communeSign);
+worldBox([0.06, 0.9, 0.06], [4.9, 0.48, 4.3], stone);
+
+let communeIndex = 0;
+let communePrevious = communeNames[0];
+let communeChangedAt = 0;
+let communeLastSwitch = 0;
+function drawCommuneSign(time) {
+  if (time - communeLastSwitch > 4200) {
+    communePrevious = communeNames[communeIndex];
+    communeIndex = (communeIndex + 1) % communeNames.length;
+    communeChangedAt = time;
+    communeLastSwitch = time;
+  }
+  const transition = communeChangedAt ? THREE.MathUtils.clamp((time - communeChangedAt) / 650, 0, 1) : 1;
+  communeContext.clearRect(0, 0, communeCanvas.width, communeCanvas.height);
+  communeContext.fillStyle = '#f7f7f2';
+  communeContext.fillRect(0, 0, communeCanvas.width, communeCanvas.height);
+  communeContext.strokeStyle = '#c33d3d';
+  communeContext.lineWidth = 28;
+  communeContext.strokeRect(18, 18, communeCanvas.width - 36, communeCanvas.height - 36);
+  communeContext.textAlign = 'center';
+  communeContext.textBaseline = 'middle';
+  communeContext.font = '700 104px Arial, sans-serif';
+  communeContext.fillStyle = '#171b1b';
+  communeContext.globalAlpha = 1 - transition;
+  communeContext.fillText(communePrevious, communeCanvas.width / 2, communeCanvas.height / 2);
+  communeContext.globalAlpha = transition;
+  communeContext.fillText(communeNames[communeIndex], communeCanvas.width / 2, communeCanvas.height / 2);
+  communeContext.globalAlpha = 1;
+  communeTexture.needsUpdate = true;
+}
+drawCommuneSign(0);
+
 // Quelques arbres encadrent la place sans concurrencer les bâtiments.
 for (const [x, z] of [[-5.2, -2.3], [5.0, -1.65], [-4.8, 2.0], [4.8, 2.5]]) {
   worldBox([0.18, 0.95, 0.18], [x, 0.55, z], stone);
@@ -272,6 +326,7 @@ window.addEventListener('resize', resize);
 resize();
 
 function animate(time) {
+  drawCommuneSign(time);
   pointerRotation += (targetRotation - pointerRotation) * 0.045;
   group.rotation.y = vehicleOrientation + pointerRotation + Math.sin(time * 0.00035) * 0.035;
   group.position.y = 0.08 + Math.sin(time * 0.0012) * 0.035;
