@@ -1,5 +1,6 @@
 // Construit une illustration Three.js légère d’un atelier mobile.
 import * as THREE from 'three';
+import { communeEntries } from './lieux-dits.js';
 
 const mount = document.querySelector('#scene');
 const loadingScreen = document.querySelector('#loading-screen');
@@ -262,16 +263,16 @@ function addFlowerBed(x, z, colors) {
 addFlowerBed(-3.25, -1.55, [0xd64945, 0xf3c85f, 0x6f78b8, 0xd64945, 0xf3c85f]);
 addFlowerBed(3.0, -1.55, [0x6f78b8, 0xf3c85f, 0xd64945, 0x6f78b8, 0xf3c85f]);
 
-// Panneau d’entrée de commune : le nom change régulièrement dans la scène.
-const communeNames = [
-  'La Châpelle Bâton',
-  'Saint-Christophe-sur-Roc',
-  'Champdeniers',
-  'Cherveux',
-  'Augé',
-  'La Crêche',
-  'Azay-le-Brûle',
-];
+// Panneau d’entrée : communes et lieux-dits associés défilent dans un ordre aléatoire.
+function shuffleEntries(entries) {
+  const shuffled = [...entries];
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const randomIndex = Math.floor(Math.random() * (index + 1));
+    [shuffled[index], shuffled[randomIndex]] = [shuffled[randomIndex], shuffled[index]];
+  }
+  return shuffled;
+}
+let displayedCommuneEntries = shuffleEntries(communeEntries);
 const communeCanvas = document.createElement('canvas');
 communeCanvas.width = 1400;
 communeCanvas.height = 500;
@@ -295,13 +296,35 @@ scene.add(communeSign);
 worldBox([0.06, 0.9, 0.06], [4.9, 0.48, 4.3], stone);
 
 let communeIndex = 0;
-let communePrevious = communeNames[0];
+let communePrevious = displayedCommuneEntries[0];
 let communeChangedAt = 0;
 let communeLastSwitch = 0;
+function drawCommuneEntry(entry, alpha) {
+  communeContext.globalAlpha = alpha;
+  communeContext.fillStyle = '#171b1b';
+  if (entry.type === 'commune') {
+    communeContext.font = '700 110px Arial, sans-serif';
+    communeContext.fillText(entry.name, communeCanvas.width / 2, 190);
+    communeContext.font = '600 62px Arial, sans-serif';
+    communeContext.fillText(entry.department, communeCanvas.width / 2, 335);
+  } else {
+    communeContext.font = '700 94px Arial, sans-serif';
+    communeContext.fillText(entry.name, communeCanvas.width / 2, 145);
+    communeContext.font = '600 58px Arial, sans-serif';
+    communeContext.fillText(`Commune de ${entry.commune}`, communeCanvas.width / 2, 285);
+    communeContext.font = '500 50px Arial, sans-serif';
+    communeContext.fillText(entry.department, communeCanvas.width / 2, 390);
+  }
+  communeContext.globalAlpha = 1;
+}
 function drawCommuneSign(time) {
-  if (time - communeLastSwitch > 4200) {
-    communePrevious = communeNames[communeIndex];
-    communeIndex = (communeIndex + 1) % communeNames.length;
+  if (time - communeLastSwitch > 3200) {
+    communePrevious = displayedCommuneEntries[communeIndex];
+    communeIndex += 1;
+    if (communeIndex >= displayedCommuneEntries.length) {
+      displayedCommuneEntries = shuffleEntries(communeEntries);
+      communeIndex = 0;
+    }
     communeChangedAt = time;
     communeLastSwitch = time;
   }
@@ -314,12 +337,9 @@ function drawCommuneSign(time) {
   communeContext.strokeRect(18, 18, communeCanvas.width - 36, communeCanvas.height - 36);
   communeContext.textAlign = 'center';
   communeContext.textBaseline = 'middle';
-  communeContext.font = '700 104px Arial, sans-serif';
-  communeContext.fillStyle = '#171b1b';
   communeContext.globalAlpha = 1 - transition;
-  communeContext.fillText(communePrevious, communeCanvas.width / 2, communeCanvas.height / 2);
-  communeContext.globalAlpha = transition;
-  communeContext.fillText(communeNames[communeIndex], communeCanvas.width / 2, communeCanvas.height / 2);
+  drawCommuneEntry(communePrevious, 1 - transition);
+  drawCommuneEntry(displayedCommuneEntries[communeIndex], transition);
   communeContext.globalAlpha = 1;
   communeTexture.needsUpdate = true;
 }
