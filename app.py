@@ -89,9 +89,40 @@ def make_pdf(data, document_url):
     def stroke(color):
         return f"{color[0]} {color[1]} {color[2]} RG"
 
+    def lower_semicircle(cx, cy, radius):
+        k = radius * 0.5522848
+        return (
+            f"{cx - radius:g} {cy:g} m "
+            f"{cx - radius:g} {cy - k:g} {cx - k:g} {cy - radius:g} {cx:g} {cy - radius:g} c "
+            f"{cx + k:g} {cy - radius:g} {cx + radius:g} {cy - k:g} {cx + radius:g} {cy:g} c h"
+        )
+
+    def circle(cx, cy, radius):
+        k = radius * 0.5522848
+        return (
+            f"{cx + radius:g} {cy:g} m "
+            f"{cx + radius:g} {cy + k:g} {cx + k:g} {cy + radius:g} {cx:g} {cy + radius:g} c "
+            f"{cx - k:g} {cy + radius:g} {cx - radius:g} {cy + k:g} {cx - radius:g} {cy:g} c "
+            f"{cx - radius:g} {cy - k:g} {cx - k:g} {cy - radius:g} {cx:g} {cy - radius:g} c "
+            f"{cx + k:g} {cy - radius:g} {cx + radius:g} {cy - k:g} {cx + radius:g} {cy:g} c h"
+        )
+
     commands = [
         "q",
         fill(orange), "55 835 495 3 re f",
+        # Two recognizable truck-tire halves hang from the orange roof line.
+        fill(ink),
+        lower_semicircle(330, 835, 20) + " f",
+        lower_semicircle(415, 835, 20) + " f",
+        "0.67 0.69 0.68 rg",
+        lower_semicircle(330, 835, 13) + " f",
+        lower_semicircle(415, 835, 13) + " f",
+        "0.09 0.13 0.12 rg",
+        lower_semicircle(330, 835, 7) + " f",
+        lower_semicircle(415, 835, 7) + " f",
+        "0.82 0.83 0.80 rg",
+        circle(323, 829, 1.5) + " f", circle(330, 826, 1.5) + " f", circle(337, 829, 1.5) + " f",
+        circle(408, 829, 1.5) + " f", circle(415, 826, 1.5) + " f", circle(422, 829, 1.5) + " f",
         "BT", "/F1 24 Tf", fill(ink), "55 810 Td", pdf_text("L'ATELIER ROULANT"), "ET",
         "BT", "/F1 10 Tf", fill(orange), "55 790 Td", pdf_text("Réparer plutôt que remplacer"), "ET",
         "BT", "/F1 10 Tf", fill(ink), "455 815 Td", pdf_text("Freddy Frouin"), "ET",
