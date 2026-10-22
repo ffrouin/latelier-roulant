@@ -417,25 +417,65 @@ const offerButton = document.querySelector('.cta');
 const serviceScene = document.querySelector('#service-scene');
 const servicePanel = document.querySelector('.copy');
 const serviceSelection = document.querySelector('#service-selection');
+const serviceChoice = document.querySelector('#service-choice');
+const serviceDetail = document.querySelector('#service-detail');
+const detailTitle = document.querySelector('#detail-title');
+const detailIntro = document.querySelector('#detail-intro');
+const detailObjectLabel = document.querySelector('#detail-object-label');
+const detailObject = document.querySelector('#detail-object');
+const detailDescription = document.querySelector('#detail-description');
+const detailFeedback = document.querySelector('#detail-feedback');
+const detailCopy = {
+  'Électroménager': ['Quel appareil souhaitez-vous faire réparer ?', 'Indiquez l’appareil concerné et décrivez la panne constatée.', 'Appareil ou équipement', 'Ex. lave-linge, four, réfrigérateur…'],
+  'Informatique & électronique': ['Quel appareil faut-il remettre en service ?', 'Précisez l’équipement, le symptôme et les éventuels messages d’erreur.', 'Appareil ou équipement', 'Ex. ordinateur portable, écran, imprimante…'],
+  'Maison & mobilier': ['Que faut-il remettre en état ?', 'Décrivez la pièce, le meuble ou la réparation à effectuer.', 'Élément ou zone concernée', 'Ex. meuble, mur, parquet, plafond…'],
+  'Débarras': ['Que souhaitez-vous débarrasser ?', 'Indiquez le type et le volume approximatif des objets à évacuer.', 'Objets ou volume', 'Ex. cave, mobilier, électroménager…'],
+  'Diagnostic': ['Que se passe-t-il ?', 'Décrivez librement le problème : nous vous aiderons à identifier la bonne intervention.', 'Objet ou situation', 'Ex. appareil qui ne démarre plus…'],
+  'Autre demande': ['Comment pouvons-nous vous aider ?', 'Décrivez votre demande avec vos propres mots.', 'Sujet de la demande', 'Ex. une autre intervention à domicile…'],
+};
 offerButton.addEventListener('click', (event) => {
   event.preventDefault();
   document.querySelector('#scene').classList.add('is-fading');
   servicePanel.classList.add('is-fading');
   serviceScene.classList.add('is-visible');
 });
-document.querySelector('.service-back').addEventListener('click', () => {
+document.querySelector('#service-home-back').addEventListener('click', () => {
   serviceScene.classList.remove('is-visible');
   document.querySelector('#scene').classList.remove('is-fading');
   servicePanel.classList.remove('is-fading');
   serviceSelection.textContent = 'Sélectionnez une catégorie pour continuer.';
+  serviceDetail.hidden = true;
+  serviceChoice.classList.remove('is-hidden');
   document.querySelectorAll('.service-option').forEach((option) => option.classList.remove('is-selected'));
 });
 document.querySelectorAll('.service-option').forEach((option) => {
   option.addEventListener('click', () => {
     document.querySelectorAll('.service-option').forEach((item) => item.classList.remove('is-selected'));
     option.classList.add('is-selected');
-    serviceSelection.textContent = `Besoin sélectionné : ${option.dataset.service}.`;
+    const service = option.dataset.service;
+    const [title, intro, label, placeholder] = detailCopy[service];
+    detailTitle.textContent = title;
+    detailIntro.textContent = intro;
+    detailObjectLabel.textContent = label;
+    detailObject.placeholder = placeholder;
+    detailObject.value = '';
+    detailDescription.value = '';
+    detailFeedback.textContent = '';
+    serviceSelection.textContent = `Besoin sélectionné : ${service}.`;
+    serviceChoice.classList.add('is-hidden');
+    serviceDetail.hidden = false;
   });
+});
+document.querySelector('#detail-back').addEventListener('click', () => {
+  serviceDetail.hidden = true;
+  serviceChoice.classList.remove('is-hidden');
+});
+document.querySelector('#detail-next').addEventListener('click', () => {
+  if (!detailObject.value.trim() && !detailDescription.value.trim()) {
+    detailFeedback.textContent = 'Ajoutez au moins une précision avant de continuer.';
+    return;
+  }
+  detailFeedback.textContent = 'Votre besoin est prêt à être complété par le lieu et vos coordonnées.';
 });
 requestAnimationFrame(animate);
 window.setTimeout(revealWelcome, 700);

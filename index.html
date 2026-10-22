@@ -46,7 +46,7 @@
     #scene.is-fading { opacity:0; filter:blur(8px); pointer-events:none; }
     #scene.is-orbiting { cursor:grabbing; }
     #scene canvas { display:block; width:100%; height:100%; }
-    .service-scene { position:fixed; inset:0; z-index:20; display:grid; place-items:center; padding:96px clamp(24px,6vw,96px) 48px; background:var(--paper); opacity:0; transform:translateY(18px); pointer-events:none; transition:opacity .8s ease, transform .8s ease; }
+    .service-scene { position:fixed; inset:0; z-index:20; display:block; overflow-y:auto; overscroll-behavior:contain; padding:96px clamp(24px,6vw,96px) 48px; background:var(--paper); opacity:0; transform:translateY(18px); pointer-events:none; transition:opacity .8s ease, transform .8s ease; }
     .service-scene.is-visible { opacity:1; transform:translateY(0); pointer-events:auto; }
     .service-content { width:min(1080px,100%); }
     .service-kicker { color:var(--accent); font-size:.72rem; font-weight:700; letter-spacing:.16em; text-transform:uppercase; margin-bottom:18px; }
@@ -57,10 +57,21 @@
     .service-option:hover, .service-option.is-selected { transform:translateY(-4px); border-color:var(--accent); background:#fffaf3; }
     .service-option strong { display:block; margin-bottom:12px; font:600 1.2rem 'Space Grotesk',sans-serif; letter-spacing:-.04em; }
     .service-option span { color:var(--muted); font-size:.88rem; line-height:1.35; }
+    .service-options.is-hidden { display:none; }
+    .service-detail[hidden] { display:none; }
+    .service-detail h3 { margin:0; font:700 clamp(2rem,4.5vw,4.4rem)/.92 'Space Grotesk',sans-serif; letter-spacing:-.07em; }
+    .detail-fields { display:grid; grid-template-columns:1fr 1fr; gap:16px; max-width:760px; }
+    .detail-fields label { display:flex; flex-direction:column; gap:8px; color:var(--ink); font-size:.86rem; font-weight:600; }
+    .detail-fields label:nth-child(2) { grid-column:1 / -1; }
+    .detail-fields input, .detail-fields textarea { width:100%; border:1px solid var(--line); border-radius:0; padding:13px 14px; color:var(--ink); background:#fff; font:400 .95rem 'DM Sans',sans-serif; resize:vertical; }
+    .detail-fields input:focus, .detail-fields textarea:focus { outline:2px solid var(--accent); outline-offset:2px; }
+    .detail-next { border:0; padding:13px 18px; color:#fff; background:var(--ink); cursor:pointer; font:600 .86rem 'DM Sans',sans-serif; }
+    .detail-next:hover { background:var(--accent); }
+    .detail-feedback { min-height:22px; margin-top:14px; color:var(--accent); font-size:.86rem; }
     .service-footer { display:flex; align-items:center; justify-content:space-between; gap:24px; margin-top:26px; color:var(--muted); font-size:.86rem; }
     .service-back { border:0; padding:0; color:var(--ink); background:none; cursor:pointer; font:600 .86rem 'DM Sans',sans-serif; }
     @media (max-width:850px) { .service-options { grid-template-columns:repeat(2,1fr); } }
-    @media (max-width:520px) { .service-scene { overflow:auto; align-items:start; padding-top:110px; } .service-options { grid-template-columns:1fr; } .service-option { min-height:auto; } .service-footer { align-items:flex-start; flex-direction:column-reverse; } }
+    @media (max-width:520px) { .service-scene { overflow:auto; align-items:start; padding-top:110px; } .service-options { grid-template-columns:1fr; } .service-option { min-height:auto; } .service-footer { align-items:flex-start; flex-direction:column-reverse; } .detail-fields { grid-template-columns:1fr; } .detail-fields label:nth-child(2) { grid-column:auto; } }
     .services { background:#fff; padding:100px clamp(24px,5vw,76px); }
     .section-head { max-width:1440px; margin:0 auto 48px; display:flex; justify-content:space-between; gap:32px; align-items:end; }
     .section-head h2 { font:600 clamp(2.4rem,5vw,4.8rem)/.95 'Space Grotesk',sans-serif; letter-spacing:-.06em; margin:0; }
@@ -101,7 +112,7 @@
         <div class="service-kicker">L’Atelier Roulant · étape 1</div>
         <h2 id="titre-services">Pour quel besoin souhaitez-vous faire appel à nous&nbsp;?</h2>
         <p class="service-intro">Choisissez la situation qui correspond le mieux à votre demande. Vous pourrez ensuite préciser le problème et joindre une photo si nécessaire.</p>
-        <div class="service-options" role="list">
+        <div class="service-options" id="service-choice" role="list">
           <button class="service-option" type="button" data-service="Électroménager"><strong>Électroménager</strong><span>Diagnostiquer et réparer vos appareils du quotidien.</span></button>
           <button class="service-option" type="button" data-service="Informatique & électronique"><strong>Informatique & électronique</strong><span>Comprendre une panne et remettre vos appareils en service.</span></button>
           <button class="service-option" type="button" data-service="Maison & mobilier"><strong>Maison & mobilier</strong><span>Réparer un meuble, un mur, un sol ou un plafond.</span></button>
@@ -109,7 +120,19 @@
           <button class="service-option" type="button" data-service="Diagnostic"><strong>Diagnostic</strong><span>Vous ne savez pas encore quelle solution choisir.</span></button>
           <button class="service-option" type="button" data-service="Autre demande"><strong>Autre demande</strong><span>Une situation qui ne rentre pas dans les catégories proposées.</span></button>
         </div>
-        <div class="service-footer"><button class="service-back" type="button">← Retour à l’accueil</button><span id="service-selection">Sélectionnez une catégorie pour continuer.</span></div>
+        <div class="service-detail" id="service-detail" hidden>
+          <div class="service-kicker">L’Atelier Roulant · étape 2</div>
+          <h3 id="detail-title">Décrivez votre besoin</h3>
+          <p class="service-intro" id="detail-intro">Quelques précisions nous aideront à préparer notre intervention.</p>
+          <div class="detail-fields">
+            <label><span id="detail-object-label">Objet ou équipement</span><input id="detail-object" type="text" placeholder="Ex. lave-linge, ordinateur, meuble…"></label>
+            <label><span>Votre description</span><textarea id="detail-description" rows="4" placeholder="Décrivez ce qui se passe ou ce qu’il faut réparer…"></textarea></label>
+            <label><span>Photo facultative</span><input id="detail-photo" type="file" accept="image/*"></label>
+          </div>
+          <div class="service-footer"><button class="service-back" id="detail-back" type="button">← Modifier mon besoin</button><button class="detail-next" id="detail-next" type="button">Continuer →</button></div>
+          <div class="detail-feedback" id="detail-feedback" aria-live="polite"></div>
+        </div>
+        <div class="service-footer"><button class="service-back" id="service-home-back" type="button">← Retour à l’accueil</button><span id="service-selection">Sélectionnez une catégorie pour continuer.</span></div>
       </div>
     </section>
     <footer><span>L'Atelier Roulant - Freddy Frouin - 0663222280 - 514914712 RCS Niort - freddy@linuxtribe.fr</span></footer>
