@@ -443,6 +443,10 @@ function animate(time) {
 const offerButton = document.querySelector('.cta');
 const serviceScene = document.querySelector('#service-scene');
 const serviceContent = serviceScene.querySelector('.service-content');
+const processProgress = document.querySelector('#process-progress');
+const processProgressFill = document.querySelector('#process-progress-fill');
+const processProgressLabel = document.querySelector('#process-progress-label');
+const processProgressPoints = [...document.querySelectorAll('.process-progress-point')];
 const servicePanel = document.querySelector('.copy');
 const serviceSelection = document.querySelector('#service-selection');
 const serviceStepOne = document.querySelector('#service-step-one');
@@ -469,6 +473,14 @@ const requestPdfViewer = document.querySelector('#request-pdf-viewer');
 const requestPdfDownload = document.querySelector('#request-pdf-download');
 let humanGameRound = 0;
 let stepTransitionInProgress = false;
+function updateProcessProgress(percent, label) {
+  processProgressFill.style.width = `${percent}%`;
+  processProgress.setAttribute('aria-valuenow', String(percent));
+  processProgressLabel.textContent = label;
+  processProgressPoints.forEach((point, index) => {
+    point.classList.toggle('is-active', index * 20 <= percent);
+  });
+}
 function transitionForward(update) {
   if (stepTransitionInProgress) return;
   stepTransitionInProgress = true;
@@ -508,6 +520,7 @@ const detailCopy = {
 };
 offerButton.addEventListener('click', (event) => {
   event.preventDefault();
+  updateProcessProgress(0, 'Étape 1 sur 5');
   document.querySelector('#scene').classList.add('is-fading');
   servicePanel.classList.add('is-fading');
   serviceScene.classList.add('is-visible');
@@ -521,6 +534,7 @@ document.querySelector('#service-home-back').addEventListener('click', () => {
   serviceLocation.hidden = true;
   serviceSummary.hidden = true;
   requestPdf.hidden = true;
+  updateProcessProgress(0, 'Étape 1 sur 5');
   serviceStepOne.classList.remove('is-hidden');
   serviceChoice.classList.remove('is-hidden');
   document.querySelectorAll('.service-option').forEach((option) => option.classList.remove('is-selected'));
@@ -539,6 +553,7 @@ document.querySelectorAll('.service-option').forEach((option) => {
     detailDescription.value = '';
     detailFeedback.textContent = '';
     serviceSelection.textContent = `Besoin sélectionné : ${service}.`;
+    updateProcessProgress(20, 'Étape 2 sur 5');
     transitionForward(() => {
       serviceStepOne.classList.add('is-hidden');
       serviceChoice.classList.add('is-hidden');
@@ -549,6 +564,7 @@ document.querySelectorAll('.service-option').forEach((option) => {
 document.querySelector('#detail-back').addEventListener('click', () => {
   serviceDetail.hidden = true;
   serviceLocation.hidden = true;
+  updateProcessProgress(0, 'Étape 1 sur 5');
   serviceStepOne.classList.remove('is-hidden');
   serviceChoice.classList.remove('is-hidden');
 });
@@ -558,6 +574,7 @@ document.querySelector('#detail-next').addEventListener('click', () => {
     return;
   }
   detailFeedback.textContent = '';
+  updateProcessProgress(40, 'Étape 3 sur 5');
   transitionForward(() => {
     serviceDetail.hidden = true;
     serviceLocation.hidden = false;
@@ -566,6 +583,7 @@ document.querySelector('#detail-next').addEventListener('click', () => {
 document.querySelector('#location-back').addEventListener('click', () => {
   serviceLocation.hidden = true;
   serviceSummary.hidden = true;
+  updateProcessProgress(20, 'Étape 2 sur 5');
   serviceDetail.hidden = false;
 });
 document.querySelector('#location-next').addEventListener('click', () => {
@@ -610,6 +628,7 @@ document.querySelector('#location-next').addEventListener('click', () => {
   requestPdf.hidden = true;
   requestPdfViewer.removeAttribute('data');
   requestPdfDownload.removeAttribute('href');
+  updateProcessProgress(60, 'Étape 4 sur 5');
   transitionForward(() => {
     serviceLocation.hidden = true;
     serviceSummary.hidden = false;
@@ -617,10 +636,12 @@ document.querySelector('#location-next').addEventListener('click', () => {
 });
 document.querySelector('#summary-back').addEventListener('click', () => {
   serviceSummary.hidden = true;
+  updateProcessProgress(40, 'Étape 3 sur 5');
   serviceLocation.hidden = false;
 });
 document.querySelector('#summary-confirm').addEventListener('click', () => {
   summaryFeedback.textContent = '';
+  updateProcessProgress(80, 'Vérification finale');
   humanVerification.hidden = false;
   resetHumanGame();
   humanTarget.focus();
@@ -706,6 +727,7 @@ humanContinue.addEventListener('click', async () => {
     requestPdfViewer.setAttribute('data', pdfUrl);
     requestPdfDownload.href = pdfUrl;
     requestPdfDownload.download = `demande-${requestId}.pdf`;
+    updateProcessProgress(100, 'Processus terminé');
     transitionForward(() => {
       serviceSummary.hidden = true;
       requestPdf.hidden = false;

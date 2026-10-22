@@ -49,6 +49,15 @@
     #scene canvas { display:block; width:100%; height:100%; }
     .service-scene { position:fixed; inset:0; z-index:20; display:block; overflow-y:auto; overscroll-behavior:contain; padding:96px clamp(24px,6vw,96px) 48px; background:var(--paper); opacity:0; transform:translateY(18px); pointer-events:none; transition:opacity .8s ease, transform .8s ease; }
     .service-scene.is-visible { opacity:1; transform:translateY(0); pointer-events:auto; }
+    .process-progress { position:absolute; top:24px; left:clamp(24px,6vw,96px); right:clamp(24px,6vw,96px); z-index:2; }
+    .process-progress-line { position:relative; height:18px; }
+    .process-progress-line::before, .process-progress-fill { content:''; position:absolute; left:0; right:0; top:7px; height:4px; border-radius:99px; }
+    .process-progress-line::before { background:var(--line); }
+    .process-progress-fill { right:auto; width:0; background:var(--accent); transition:width .45s cubic-bezier(.22,.75,.25,1); }
+    .process-progress-points { position:absolute; inset:0; display:flex; justify-content:space-between; align-items:center; }
+    .process-progress-point { width:14px; height:14px; border:3px solid var(--line); border-radius:50%; background:var(--paper); transition:border-color .3s ease, background .3s ease, transform .3s ease; }
+    .process-progress-point.is-active { border-color:var(--accent); background:var(--accent); transform:scale(1.12); }
+    .process-progress-label { margin-top:7px; color:var(--muted); font-size:.72rem; font-weight:700; letter-spacing:.12em; text-align:right; text-transform:uppercase; }
     .service-content { width:min(1080px,100%); }
     @keyframes step-slide-left { from { transform:translateX(0); opacity:1; } to { transform:translateX(-100%); opacity:0; } }
     @keyframes step-slide-right { from { transform:translateX(100%); opacity:0; } to { transform:translateX(0); opacity:1; } }
@@ -141,6 +150,20 @@
       <div id="scene" aria-label="Illustration 3D d’un atelier mobile"></div>
     </section>
     <section class="service-scene" id="service-scene" aria-labelledby="titre-services">
+      <div class="process-progress" id="process-progress" role="progressbar" aria-label="Progression de la demande" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <div class="process-progress-line">
+          <span class="process-progress-fill" id="process-progress-fill"></span>
+          <div class="process-progress-points" aria-hidden="true">
+            <span class="process-progress-point is-active"></span>
+            <span class="process-progress-point"></span>
+            <span class="process-progress-point"></span>
+            <span class="process-progress-point"></span>
+            <span class="process-progress-point"></span>
+            <span class="process-progress-point"></span>
+          </div>
+        </div>
+        <div class="process-progress-label" id="process-progress-label">Étape 1 sur 5</div>
+      </div>
       <div class="service-content">
         <div class="service-step-one" id="service-step-one">
           <div class="service-kicker">L’Atelier Roulant · étape 1</div>
