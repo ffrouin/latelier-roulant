@@ -2,6 +2,15 @@
 import * as THREE from 'three';
 
 const mount = document.querySelector('#scene');
+const loadingScreen = document.querySelector('#loading-screen');
+const loadingProgress = document.querySelector('#loading-progress');
+const loadingStatus = document.querySelector('#loading-status');
+const page = document.querySelector('.page');
+function updateLoadingProgress(value, status) {
+  loadingProgress.style.width = `${value}%`;
+  loadingStatus.textContent = status;
+}
+updateLoadingProgress(8, 'Préparation de l’atelier…');
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(28, 1, 0.1, 100);
 const cameraTarget = new THREE.Vector3(0, 1.45, -1.1);
@@ -25,6 +34,7 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 mount.appendChild(renderer.domElement);
+updateLoadingProgress(26, 'Installation de la scène…');
 
 const palette = { ink: 0x18211f, orange: 0xee6b3b, green: 0x7d9b76, cream: 0xf3f1e9, metal: 0xd6d2c5 };
 const group = new THREE.Group();
@@ -314,6 +324,7 @@ function drawCommuneSign(time) {
   communeTexture.needsUpdate = true;
 }
 drawCommuneSign(0);
+updateLoadingProgress(78, 'Mise en place du village…');
 
 // Quelques arbres encadrent la place sans concurrencer les bâtiments.
 for (const [x, z] of [[-5.2, -2.3], [5.8, -1.65], [-4.8, 2.0], [5.6, 2.5]]) {
@@ -383,13 +394,23 @@ function resize() {
 }
 window.addEventListener('resize', resize);
 resize();
+updateLoadingProgress(88, 'Préparation de l’accueil…');
 
+let welcomeRevealed = false;
+function revealWelcome() {
+  if (welcomeRevealed) return;
+  welcomeRevealed = true;
+  updateLoadingProgress(100, 'Prêt');
+  page.classList.add('is-ready');
+  loadingScreen.classList.add('is-hidden');
+}
 function animate(time) {
   drawCommuneSign(time);
   pointerRotation += (targetRotation - pointerRotation) * 0.045;
   group.rotation.y = vehicleOrientation + pointerRotation + Math.sin(time * 0.00035) * 0.035;
   group.position.y = 0.08 + Math.sin(time * 0.0012) * 0.035;
   renderer.render(scene, camera);
+  revealWelcome();
   requestAnimationFrame(animate);
 }
 const offerButton = document.querySelector('.cta');
@@ -399,5 +420,6 @@ offerButton.addEventListener('click', (event) => {
   document.querySelector('.copy').classList.add('is-fading');
 });
 requestAnimationFrame(animate);
+window.setTimeout(revealWelcome, 700);
 window.__ATELIER_ROULANT_READY = true;
 window.__ATELIER_ROULANT_CAMERA = camera;
