@@ -425,6 +425,8 @@ const detailObjectLabel = document.querySelector('#detail-object-label');
 const detailObject = document.querySelector('#detail-object');
 const detailDescription = document.querySelector('#detail-description');
 const detailFeedback = document.querySelector('#detail-feedback');
+const serviceLocation = document.querySelector('#service-location');
+const locationFeedback = document.querySelector('#location-feedback');
 const detailCopy = {
   'Électroménager': ['Quel appareil souhaitez-vous faire réparer ?', 'Indiquez l’appareil concerné et décrivez la panne constatée.', 'Appareil ou équipement', 'Ex. lave-linge, four, réfrigérateur…'],
   'Informatique & électronique': ['Quel appareil faut-il remettre en service ?', 'Précisez l’équipement, le symptôme et les éventuels messages d’erreur.', 'Appareil ou équipement', 'Ex. ordinateur portable, écran, imprimante…'],
@@ -445,6 +447,7 @@ document.querySelector('#service-home-back').addEventListener('click', () => {
   servicePanel.classList.remove('is-fading');
   serviceSelection.textContent = 'Sélectionnez une catégorie pour continuer.';
   serviceDetail.hidden = true;
+  serviceLocation.hidden = true;
   serviceChoice.classList.remove('is-hidden');
   document.querySelectorAll('.service-option').forEach((option) => option.classList.remove('is-selected'));
 });
@@ -468,6 +471,7 @@ document.querySelectorAll('.service-option').forEach((option) => {
 });
 document.querySelector('#detail-back').addEventListener('click', () => {
   serviceDetail.hidden = true;
+  serviceLocation.hidden = true;
   serviceChoice.classList.remove('is-hidden');
 });
 document.querySelector('#detail-next').addEventListener('click', () => {
@@ -475,7 +479,22 @@ document.querySelector('#detail-next').addEventListener('click', () => {
     detailFeedback.textContent = 'Ajoutez au moins une précision avant de continuer.';
     return;
   }
-  detailFeedback.textContent = 'Votre besoin est prêt à être complété par le lieu et vos coordonnées.';
+  detailFeedback.textContent = '';
+  serviceDetail.hidden = true;
+  serviceLocation.hidden = false;
+});
+document.querySelector('#location-back').addEventListener('click', () => {
+  serviceLocation.hidden = true;
+  serviceDetail.hidden = false;
+});
+document.querySelector('#location-next').addEventListener('click', () => {
+  const town = document.querySelector('#location-town').value.trim();
+  const availability = document.querySelector('#location-availability').value;
+  if (!town || !availability) {
+    locationFeedback.textContent = 'Indiquez au moins la commune et une disponibilité.';
+    return;
+  }
+  locationFeedback.textContent = 'Lieu et disponibilité enregistrés pour le récapitulatif.';
 });
 requestAnimationFrame(animate);
 window.setTimeout(revealWelcome, 700);
