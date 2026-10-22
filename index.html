@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="L’Atelier Roulant — réparations et dépannages à domicile.">
+  <title>L’Atelier Roulant — Réparer plutôt que remplacer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <script type="importmap">
+    {"imports":{"three":"https://unpkg.com/three@0.169.0/build/three.module.js"}}
+  </script>
+  <link rel="stylesheet" href="data:text/css,">
+  <style>
+    :root { --ink:#18211f; --muted:#66736f; --paper:#f3f1e9; --accent:#ee6b3b; --green:#7d9b76; --line:rgba(24,33,31,.13); }
+    * { box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    body { margin:0; color:var(--ink); background:var(--paper); font-family:'DM Sans',sans-serif; }
+    .page { min-height:100vh; overflow:hidden; position:relative; }
+    nav { display:flex; justify-content:space-between; align-items:center; padding:28px clamp(24px,5vw,76px); position:absolute; inset:0 0 auto; z-index:3; }
+    .brand { font:700 1.05rem 'Space Grotesk',sans-serif; letter-spacing:-.03em; }
+    .brand span { color:var(--accent); }
+    nav a { color:var(--ink); text-decoration:none; font-size:.9rem; font-weight:600; }
+    .hero { min-height:760px; display:grid; grid-template-columns:minmax(0,1fr) minmax(380px,1fr); align-items:center; max-width:1440px; margin:auto; padding:116px clamp(24px,5vw,76px) 72px; gap:32px; }
+    .copy { position:relative; z-index:2; max-width:650px; }
+    .eyebrow { color:var(--accent); font-weight:700; letter-spacing:.14em; text-transform:uppercase; font-size:.72rem; margin-bottom:22px; }
+    h1 { font:700 clamp(3.6rem,7vw,7.4rem)/.88 'Space Grotesk',sans-serif; letter-spacing:-.075em; margin:0 0 28px; max-width:700px; }
+    h1 em { color:var(--accent); font-style:normal; }
+    .tagline { font-size:clamp(1.15rem,2vw,1.55rem); line-height:1.35; max-width:470px; margin:0 0 35px; color:#40504a; }
+    .cta { display:inline-flex; align-items:center; gap:12px; padding:15px 20px; border-radius:999px; color:#fff; background:var(--ink); text-decoration:none; font-weight:700; transition:transform .2s, background .2s; }
+    .cta:hover { transform:translateY(-2px); background:var(--accent); }
+    .cta::after { content:'↗'; font-size:1.1rem; }
+    #scene { min-height:560px; width:100%; position:relative; }
+    #scene canvas { display:block; width:100%; height:100%; }
+    .services { background:#fff; padding:100px clamp(24px,5vw,76px); }
+    .section-head { max-width:1440px; margin:0 auto 48px; display:flex; justify-content:space-between; gap:32px; align-items:end; }
+    .section-head h2 { font:600 clamp(2.4rem,5vw,4.8rem)/.95 'Space Grotesk',sans-serif; letter-spacing:-.06em; margin:0; }
+    .section-head p { max-width:350px; color:var(--muted); line-height:1.55; margin:0; }
+    .cards { max-width:1440px; margin:auto; display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:var(--line); border:1px solid var(--line); }
+    .card { min-height:230px; padding:28px; background:#fff; display:flex; flex-direction:column; justify-content:space-between; }
+    .number { color:var(--accent); font:600 1.5rem 'Space Grotesk',sans-serif; }
+    .card h3 { font:600 1.45rem 'Space Grotesk',sans-serif; letter-spacing:-.04em; margin:40px 0 10px; }
+    .card p { color:var(--muted); line-height:1.45; margin:0; font-size:.94rem; }
+    footer { padding:32px clamp(24px,5vw,76px); display:flex; justify-content:space-between; color:var(--muted); font-size:.82rem; }
+    @media (max-width:850px) { .hero { grid-template-columns:1fr; min-height:auto; padding-top:130px; } #scene { min-height:420px; order:-1; } h1 { max-width:550px; } .cards { grid-template-columns:repeat(2,1fr); } .section-head { display:block; } .section-head p { margin-top:18px; } }
+    @media (max-width:520px) { nav { padding:22px 20px; } nav a { display:none; } .hero { padding-left:20px; padding-right:20px; } .services { padding:72px 20px; } .cards { grid-template-columns:1fr; } footer { padding:26px 20px; display:block; } footer span { display:block; margin-top:8px; } }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <nav><div class="brand">L’Atelier <span>Roulant</span></div><a href="#services">Voir les services ↓</a></nav>
+    <section class="hero" aria-labelledby="titre-principal">
+      <div class="copy">
+        <div class="eyebrow">Réparation · dépannage · réemploi</div>
+        <h1 id="titre-principal">Réparer<br><em>plutôt que</em><br>remplacer.</h1>
+        <p class="tagline">Vos réparations et dépannages à domicile, pour diagnostiquer, réparer et donner une seconde vie à ce qui vous entoure.</p>
+        <a class="cta" href="#services">Découvrir l’offre</a>
+      </div>
+      <div id="scene" aria-label="Illustration 3D d’un atelier mobile"></div>
+    </section>
+    <section class="services" id="services" aria-labelledby="titre-services">
+      <div class="section-head"><h2 id="titre-services">Une aide concrète,<br>chez vous.</h2><p>Du premier diagnostic à la remise en état, nous cherchons d’abord la solution la plus simple, utile et durable.</p></div>
+      <div class="cards">
+        <article class="card"><div class="number">01</div><div><h3>Électroménager</h3><p>Identifier la panne, évaluer la réparabilité et intervenir quand c’est possible.</p></div></article>
+        <article class="card"><div class="number">02</div><div><h3>Informatique & électronique</h3><p>Un coup de main pour comprendre, diagnostiquer et remettre en service vos appareils.</p></div></article>
+        <article class="card"><div class="number">03</div><div><h3>Maison & mobilier</h3><p>Petites réparations sur les meubles, murs, sols, plafonds et équipements du quotidien.</p></div></article>
+        <article class="card"><div class="number">04</div><div><h3>Débarras</h3><p>Enlever les encombrants et orienter ce qui peut encore être réemployé ou valorisé.</p></div></article>
+      </div>
+    </section>
+    <footer><strong>L’Atelier Roulant</strong><span>Réparer plutôt que remplacer</span></footer>
+  </main>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
