@@ -414,10 +414,28 @@ function animate(time) {
   requestAnimationFrame(animate);
 }
 const offerButton = document.querySelector('.cta');
+const serviceScene = document.querySelector('#service-scene');
+const servicePanel = document.querySelector('.copy');
+const serviceSelection = document.querySelector('#service-selection');
 offerButton.addEventListener('click', (event) => {
   event.preventDefault();
   document.querySelector('#scene').classList.add('is-fading');
-  document.querySelector('.copy').classList.add('is-fading');
+  servicePanel.classList.add('is-fading');
+  serviceScene.classList.add('is-visible');
+});
+document.querySelector('.service-back').addEventListener('click', () => {
+  serviceScene.classList.remove('is-visible');
+  document.querySelector('#scene').classList.remove('is-fading');
+  servicePanel.classList.remove('is-fading');
+  serviceSelection.textContent = 'Sélectionnez une catégorie pour continuer.';
+  document.querySelectorAll('.service-option').forEach((option) => option.classList.remove('is-selected'));
+});
+document.querySelectorAll('.service-option').forEach((option) => {
+  option.addEventListener('click', () => {
+    document.querySelectorAll('.service-option').forEach((item) => item.classList.remove('is-selected'));
+    option.classList.add('is-selected');
+    serviceSelection.textContent = `Besoin sélectionné : ${option.dataset.service}.`;
+  });
 });
 requestAnimationFrame(animate);
 window.setTimeout(revealWelcome, 700);
