@@ -80,6 +80,14 @@
     .photo-frame { display:grid; place-items:center; min-height:250px; overflow:hidden; border:1px dashed var(--line); background:rgba(255,255,255,.42); color:var(--muted); }
     .photo-frame img { display:block; width:100%; height:250px; object-fit:cover; }
     .photo-frame strong { padding:20px; font:500 .95rem 'Space Grotesk',sans-serif; }
+    .human-verification { max-width:760px; margin-top:30px; padding:24px; border:1px solid var(--line); background:rgba(255,255,255,.72); }
+    .human-verification h4 { margin:4px 0 8px; color:var(--ink); font:700 clamp(1.35rem,2.8vw,2rem)/1 'Space Grotesk',sans-serif; letter-spacing:-.04em; }
+    .human-verification p { margin:0 0 18px; color:var(--muted); font-size:.9rem; }
+    .human-game { position:relative; width:min(100%,420px); height:180px; margin:18px 0 8px; overflow:hidden; border:1px solid var(--line); background:linear-gradient(135deg,rgba(255,255,255,.9),rgba(242,237,228,.72)); }
+    .human-target { position:absolute; width:34px; height:34px; padding:0; border:5px solid rgba(255,255,255,.8); border-radius:50%; background:var(--accent); box-shadow:0 4px 14px rgba(216,98,51,.36); cursor:pointer; transition:left .18s ease,top .18s ease,transform .18s ease; }
+    .human-target:hover { transform:scale(1.12); }
+    .human-game-status { margin-bottom:18px; color:var(--muted); font:600 .8rem 'Space Grotesk',sans-serif; letter-spacing:.08em; }
+    .human-verification .detail-next:disabled { opacity:.45; cursor:not-allowed; }
     .service-footer { display:flex; align-items:center; justify-content:space-between; gap:24px; margin-top:26px; color:var(--muted); font-size:.86rem; }
     .service-back { border:0; padding:0; color:var(--ink); background:none; cursor:pointer; font:600 .86rem 'DM Sans',sans-serif; }
     @media (max-width:850px) { .service-options { grid-template-columns:repeat(2,1fr); } }
@@ -189,6 +197,17 @@
           </div>
           <div class="service-footer"><button class="service-back" id="summary-back" type="button">← Modifier le lieu</button><button class="detail-next" id="summary-confirm" type="button">Confirmer le récapitulatif →</button></div>
           <div class="detail-feedback" id="summary-feedback" aria-live="polite"></div>
+          <div class="human-verification" id="human-verification" hidden>
+            <div class="service-kicker">Dernière vérification</div>
+            <h4>Confirmez que vous êtes bien une personne</h4>
+            <p>Cliquez trois fois sur le cercle orange. Sa position changera à chaque clic.</p>
+            <div class="human-game" id="human-game" aria-label="Jeu de confirmation humaine">
+              <button class="human-target" id="human-target" type="button" aria-label="Cercle orange à cliquer"></button>
+            </div>
+            <div class="human-game-status" id="human-game-status" aria-live="polite">0 / 3</div>
+            <button class="detail-next" id="human-continue" type="button" disabled>Continuer →</button>
+            <div class="detail-feedback" id="human-feedback" aria-live="polite"></div>
+          </div>
         </div>
         <div class="service-footer"><button class="service-back" id="service-home-back" type="button">← Retour à l’accueil</button><span id="service-selection">Sélectionnez une catégorie pour continuer.</span></div>
       </div>

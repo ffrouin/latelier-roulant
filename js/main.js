@@ -429,6 +429,27 @@ const serviceLocation = document.querySelector('#service-location');
 const locationFeedback = document.querySelector('#location-feedback');
 const serviceSummary = document.querySelector('#service-summary');
 const summaryFeedback = document.querySelector('#summary-feedback');
+const humanVerification = document.querySelector('#human-verification');
+const humanGame = document.querySelector('#human-game');
+const humanTarget = document.querySelector('#human-target');
+const humanGameStatus = document.querySelector('#human-game-status');
+const humanContinue = document.querySelector('#human-continue');
+const humanFeedback = document.querySelector('#human-feedback');
+let humanGameRound = 0;
+function moveHumanTarget() {
+  const maxX = Math.max(8, humanGame.clientWidth - 42);
+  const maxY = Math.max(8, humanGame.clientHeight - 42);
+  humanTarget.style.left = `${8 + Math.random() * (maxX - 8)}px`;
+  humanTarget.style.top = `${8 + Math.random() * (maxY - 8)}px`;
+}
+function resetHumanGame() {
+  humanGameRound = 0;
+  humanGameStatus.textContent = '0 / 3';
+  humanTarget.disabled = false;
+  humanContinue.disabled = true;
+  humanFeedback.textContent = '';
+  moveHumanTarget();
+}
 const detailCopy = {
   'Électroménager': ['Quel appareil souhaitez-vous faire réparer ?', 'Indiquez l’appareil concerné et décrivez la panne constatée.', 'Appareil ou équipement', 'Ex. lave-linge, four, réfrigérateur…'],
   'Informatique & électronique': ['Quel appareil faut-il remettre en service ?', 'Précisez l’équipement, le symptôme et les éventuels messages d’erreur.', 'Appareil ou équipement', 'Ex. ordinateur portable, écran, imprimante…'],
@@ -534,6 +555,8 @@ document.querySelector('#location-next').addEventListener('click', () => {
     photoEmpty.hidden = false;
   }
   summaryFeedback.textContent = '';
+  humanVerification.hidden = true;
+  resetHumanGame();
   serviceLocation.hidden = true;
   serviceSummary.hidden = false;
 });
@@ -542,7 +565,26 @@ document.querySelector('#summary-back').addEventListener('click', () => {
   serviceLocation.hidden = false;
 });
 document.querySelector('#summary-confirm').addEventListener('click', () => {
-  summaryFeedback.textContent = 'Récapitulatif confirmé. L’étape suivante recueillera vos coordonnées.';
+  summaryFeedback.textContent = '';
+  humanVerification.hidden = false;
+  resetHumanGame();
+  humanTarget.focus();
+});
+humanTarget.addEventListener('click', () => {
+  humanGameRound += 1;
+  humanGameStatus.textContent = `${humanGameRound} / 3`;
+  if (humanGameRound >= 3) {
+    humanTarget.disabled = true;
+    humanContinue.disabled = false;
+    humanFeedback.textContent = 'Bien joué. Vous pouvez continuer.';
+    return;
+  }
+  moveHumanTarget();
+});
+humanContinue.addEventListener('click', () => {
+  if (humanGameRound < 3) return;
+  humanFeedback.textContent = 'Merci. Votre confirmation humaine est enregistrée pour cette demande.';
+  humanContinue.disabled = true;
 });
 requestAnimationFrame(animate);
 window.setTimeout(revealWelcome, 700);
