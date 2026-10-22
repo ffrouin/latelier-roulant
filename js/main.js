@@ -392,6 +392,12 @@ function animate(time) {
   renderer.render(scene, camera);
   requestAnimationFrame(animate);
 }
+const offerButton = document.querySelector('.cta');
+offerButton.addEventListener('click', (event) => {
+  event.preventDefault();
+  document.querySelector('#scene').classList.add('is-fading');
+  document.querySelector('.copy').classList.add('is-fading');
+});
 requestAnimationFrame(animate);
 window.__ATELIER_ROULANT_READY = true;
 window.__ATELIER_ROULANT_CAMERA = camera;
