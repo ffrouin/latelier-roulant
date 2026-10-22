@@ -60,8 +60,8 @@
     .service-option span { color:var(--muted); font-size:.88rem; line-height:1.35; }
     .service-step-one.is-hidden { display:none; }
     .service-options.is-hidden { display:none; }
-    .service-detail[hidden], .service-location[hidden], .service-summary[hidden] { display:none; }
-    .service-detail h3, .service-location h3, .service-summary h3 { margin:0; font:700 clamp(2rem,4.5vw,4.4rem)/.92 'Space Grotesk',sans-serif; letter-spacing:-.07em; }
+    .service-detail[hidden], .service-location[hidden], .service-summary[hidden], .request-pdf[hidden] { display:none; }
+    .service-detail h3, .service-location h3, .service-summary h3, .request-pdf h3 { margin:0; font:700 clamp(2rem,4.5vw,4.4rem)/.92 'Space Grotesk',sans-serif; letter-spacing:-.07em; }
     .detail-fields { display:grid; grid-template-columns:1fr 1fr; gap:16px; max-width:760px; }
     .detail-fields label { display:flex; flex-direction:column; gap:8px; color:var(--ink); font-size:.86rem; font-weight:600; }
     .detail-fields label:nth-child(2) { grid-column:1 / -1; }
@@ -89,16 +89,17 @@
     .human-target:hover { transform:scale(1.12); }
     .human-game-status { margin-bottom:18px; color:var(--muted); font:600 .8rem 'Space Grotesk',sans-serif; letter-spacing:.08em; }
     .human-verification .detail-next:disabled { opacity:.45; cursor:not-allowed; }
-    .request-pdf { margin-top:28px; padding-top:24px; border-top:1px solid var(--line); }
-    .request-pdf h4 { margin:0 0 8px; color:var(--ink); font:700 clamp(1.35rem,2.8vw,2rem)/1 'Space Grotesk',sans-serif; letter-spacing:-.04em; }
+    .request-pdf { margin-top:0; padding-top:0; }
     .request-pdf p { margin:0 0 16px; }
+    .request-pdf-layout { display:grid; grid-template-columns:minmax(0,1.45fr) minmax(220px,.55fr); gap:24px; align-items:start; }
     .request-pdf object { display:block; width:100%; height:520px; border:1px solid var(--line); background:#fff; }
+    .request-pdf-message { padding:22px; border:1px solid var(--line); background:rgba(255,255,255,.72); color:var(--muted); font:500 1rem/1.55 'Space Grotesk',sans-serif; }
     .pdf-download { display:inline-block; margin-top:14px; padding:12px 16px; color:#fff; background:var(--ink); cursor:pointer; font:600 .86rem 'DM Sans',sans-serif; text-decoration:none; }
     .pdf-download:hover { background:var(--accent); }
     .service-footer { display:flex; align-items:center; justify-content:space-between; gap:24px; margin-top:26px; color:var(--muted); font-size:.86rem; }
     .service-back { border:0; padding:0; color:var(--ink); background:none; cursor:pointer; font:600 .86rem 'DM Sans',sans-serif; }
     @media (max-width:850px) { .service-options { grid-template-columns:repeat(2,1fr); } }
-    @media (max-width:720px) { .summary-layout { grid-template-columns:1fr; } }
+    @media (max-width:720px) { .summary-layout { grid-template-columns:1fr; } .request-pdf-layout { grid-template-columns:1fr; } }
     @media (max-width:520px) { .service-scene { overflow:auto; align-items:start; padding-top:110px; } .service-options { grid-template-columns:1fr; } .service-option { min-height:auto; } .service-footer { align-items:flex-start; flex-direction:column-reverse; } .detail-fields { grid-template-columns:1fr; } .detail-fields label:nth-child(2) { grid-column:auto; } .summary-grid { grid-template-columns:1fr; } }
     .services { background:#fff; padding:100px clamp(24px,5vw,76px); }
     .section-head { max-width:1440px; margin:0 auto 48px; display:flex; justify-content:space-between; gap:32px; align-items:end; }
@@ -214,12 +215,18 @@
             <div class="human-game-status" id="human-game-status" aria-live="polite">0 / 3</div>
             <button class="detail-next" id="human-continue" type="button" disabled>Continuer →</button>
             <div class="detail-feedback" id="human-feedback" aria-live="polite"></div>
-            <div class="request-pdf" id="request-pdf" hidden>
-              <h4>Votre synthèse PDF</h4>
-              <p>Vous pouvez la consulter, la sauvegarder ou la transmettre comme vous le souhaitez.</p>
+          </div>
+        </div>
+        <div class="request-pdf" id="request-pdf" hidden>
+          <div class="service-kicker">L’Atelier Roulant · étape 5</div>
+          <h3>Votre synthèse PDF</h3>
+          <p>Vous pouvez la consulter, la sauvegarder ou la transmettre comme vous le souhaitez.</p>
+          <div class="request-pdf-layout">
+            <div>
               <object id="request-pdf-viewer" type="application/pdf" aria-label="Synthèse PDF de la demande"></object>
               <a class="pdf-download" id="request-pdf-download" download>Télécharger le PDF</a>
             </div>
+            <aside class="request-pdf-message">L'Atelier Roulant vous remercie pour votre demande que nous allons traiter dans les meilleurs délais.<br><br>Bien cordialement,<br>Freddy Frouin</aside>
           </div>
         </div>
         <div class="service-footer"><button class="service-back" id="service-home-back" type="button">← Retour à l’accueil</button><span id="service-selection">Sélectionnez une catégorie pour continuer.</span></div>

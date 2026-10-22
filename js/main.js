@@ -503,6 +503,7 @@ document.querySelector('#service-home-back').addEventListener('click', () => {
   serviceDetail.hidden = true;
   serviceLocation.hidden = true;
   serviceSummary.hidden = true;
+  requestPdf.hidden = true;
   serviceStepOne.classList.remove('is-hidden');
   serviceChoice.classList.remove('is-hidden');
   document.querySelectorAll('.service-option').forEach((option) => option.classList.remove('is-selected'));
@@ -682,6 +683,7 @@ humanContinue.addEventListener('click', async () => {
     requestPdfViewer.setAttribute('data', pdfUrl);
     requestPdfDownload.href = pdfUrl;
     requestPdfDownload.download = `demande-${requestId}.pdf`;
+    serviceSummary.hidden = true;
     requestPdf.hidden = false;
     humanContinue.textContent = 'Demande envoyée';
     humanFeedback.textContent = `Votre demande a été envoyée. Référence : ${requestId}.`;
