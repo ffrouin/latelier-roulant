@@ -44,7 +44,7 @@ def add_rgb_image(objects, image_bytes, name):
         f"/Length {len(compressed)} >>\nstream\n"
     ).encode("ascii") + compressed + b"\nendstream"
     objects.append(obj)
-    return len(objects)
+    return len(objects), width, height
 
 
 def qr_png(url):
@@ -80,8 +80,6 @@ def make_pdf(data, document_url):
     """Build a branded A4 PDF with customer block, request, photo and QR code."""
     orange = (0.93, 0.42, 0.23)
     ink = (0.09, 0.13, 0.12)
-    paper = (0.98, 0.97, 0.94)
-    pale_orange = (1.0, 0.94, 0.89)
     muted = (0.34, 0.38, 0.36)
 
     def fill(color):
@@ -92,17 +90,16 @@ def make_pdf(data, document_url):
 
     commands = [
         "q",
-        fill(paper), "0 0 595 842 re f",
-        fill(ink), "0 770 595 72 re f",
-        fill(orange), "42 784 7 45 re f",
-        "BT", "/F1 24 Tf", fill((1, 1, 1)), "55 810 Td", pdf_text("L'ATELIER ROULANT"), "ET",
+        fill(orange), "55 835 495 3 re f",
+        "BT", "/F1 24 Tf", fill(ink), "55 810 Td", pdf_text("L'ATELIER ROULANT"), "ET",
         "BT", "/F1 10 Tf", fill(orange), "55 790 Td", pdf_text("Réparer plutôt que remplacer"), "ET",
+        "BT", "/F1 10 Tf", fill(ink), "455 815 Td", pdf_text("Freddy Frouin"), "ET",
+        "BT", "/F1 9 Tf", fill(orange), "455 798 Td", pdf_text("06 63 22 22 80"), "ET",
         "Q",
     ]
 
     # Customer details: intentionally no heading, as requested.
     commands += [
-        "q", fill(pale_orange), "45 678 505 70 re f", stroke(orange), "45 678 505 70 re S", "Q",
         "BT", "/F1 15 Tf", fill(ink), "62 720 Td", pdf_text(f"{data['firstname']} {data['lastname']}"), "ET",
         "BT", "/F1 11 Tf", fill(ink), "62 697 Td", pdf_text(data["phone"]), "ET",
         "BT", "/F1 10 Tf", fill(muted), "285 720 Td", pdf_text(data.get("location") or "Lieu non précisé"), "ET",
@@ -137,36 +134,45 @@ def make_pdf(data, document_url):
         b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
     ]
     image_refs = {}
-    qr_ref = add_rgb_image(objects, qr_png(document_url), "QR")
+    qr_ref, qr_width, qr_height = add_rgb_image(objects, qr_png(document_url), "QR")
     image_refs["QR"] = qr_ref
 
     photo_bytes = decode_photo(data.get("photo_data"))
+    photo_width = photo_height = 0
     if photo_bytes:
-        image_refs["PHOTO"] = add_rgb_image(objects, photo_bytes, "PHOTO")
+        photo_ref, photo_width, photo_height = add_rgb_image(objects, photo_bytes, "PHOTO")
+        image_refs["PHOTO"] = photo_ref
 
-    # Photo panel on the right-hand side of the request.
+    # Photo below the request, using the full page width without distortion.
     commands += [
-        "q", fill((1, 1, 1)), "365 405 165 210 re f", stroke(orange), "365 405 165 210 re S", "Q",
-        "BT", "/F1 9 Tf", fill(orange), "378 590 Td", pdf_text("PHOTO JOINTE"), "ET",
+        "BT", "/F1 9 Tf", fill(orange), "55 380 Td", pdf_text("PHOTO JOINTE"), "ET",
     ]
     if "PHOTO" in image_refs:
+        max_width, max_height = 475, 155
+        photo_scale = min(max_width / photo_width, max_height / photo_height)
+        drawn_width = photo_width * photo_scale
+        drawn_height = photo_height * photo_scale
+        photo_x = 55 + (max_width - drawn_width) / 2
+        photo_y = 210 + (max_height - drawn_height) / 2
         commands += [
-            "q", "145 0 0 145 375 425 cm", "/PHOTO Do", "Q",
+            "q", f"{drawn_width:.3f} 0 0 {drawn_height:.3f} {photo_x:.3f} {photo_y:.3f} cm", "/PHOTO Do", "Q",
         ]
     else:
         commands += [
-            "BT", "/F1 11 Tf", fill(muted), "395 505 Td", pdf_text("Aucune photo"), "ET",
+            "BT", "/F1 11 Tf", fill(muted), "55 330 Td", pdf_text("Aucune photo"), "ET",
         ]
 
     commands += [
-        "q", fill((1, 1, 1)), "425 65 105 105 re f", stroke(orange), "425 65 105 105 re S", "Q",
         "q", "75 0 0 75 440 80 cm", "/QR Do", "Q",
         "BT", "/F1 9 Tf", fill(orange), "55 125 Td", pdf_text("DOCUMENT EN LIGNE"), "ET",
     ]
     for index, line in enumerate(wrap_lines(document_url, 58)[:3]):
         commands += ["BT", "/F1 8 Tf", fill(muted), f"55 {108 - index * 11} Td", pdf_text(line), "ET"]
+    legal_text = "L'Atelier Roulant - Freddy Frouin - 0663222280 - 514914712 RCS Niort - freddy@linuxtribe.fr"
+    legal_x = (595 - len(legal_text) * 7 * 0.48) / 2
     commands += [
         "BT", "/F1 9 Tf", fill(muted), "55 42 Td", pdf_text(f"Référence : {data['request_id']}"), "ET",
+        "BT", "/F1 7 Tf", fill(muted), f"{legal_x:.1f} 22 Td", pdf_text(legal_text), "ET",
     ]
     content = "\n".join(commands).encode("ascii")
 
