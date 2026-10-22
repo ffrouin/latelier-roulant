@@ -202,6 +202,56 @@ worldBox([0.22, 0.85, 0.05], [2.05, 1.45, -3.12], darkGlass);
 worldBox([0.18, 1.0, 0.08], [2.05, 4.55, -2.72], roof);
 worldBox([0.8, 0.12, 0.08], [2.05, 4.55, -2.72], roof);
 
+// Portes, bancs et massifs fleuris donnent vie aux abords des bâtiments.
+const wood = mat(0x8a5b3c);
+const door = mat(0x394847, 0.55);
+worldBox([0.9, 1.25, 0.05], [-3.25, 0.72, -3.56], stone);
+worldBox([0.62, 1.0, 0.06], [-3.25, 0.62, -3.6], door);
+worldBox([0.75, 1.18, 0.05], [3.0, 0.7, -3.53], stone);
+worldBox([0.5, 0.9, 0.06], [3.0, 0.58, -3.57], door);
+
+function addBench(x, z, rotation = 0) {
+  const bench = new THREE.Group();
+  bench.position.set(x, 0, z);
+  bench.rotation.y = rotation;
+  const seat = new THREE.Mesh(new THREE.BoxGeometry(1.25, 0.12, 0.34), wood);
+  seat.position.y = 0.36;
+  seat.castShadow = true;
+  bench.add(seat);
+  for (const legX of [-0.43, 0.43]) {
+    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.272, 0.24), wood);
+    leg.position.set(legX, 0.136, 0);
+    leg.castShadow = true;
+    bench.add(leg);
+  }
+  const back = new THREE.Mesh(new THREE.BoxGeometry(1.25, 0.42, 0.1), wood);
+  back.position.set(0, 0.63, -0.13);
+  back.castShadow = true;
+  bench.add(back);
+  scene.add(bench);
+}
+// Un banc sous le fronton de la mairie, puis un banc contre l’église
+// tourné vers la ligne des sapins.
+addBench(-1.82, -2.75, Math.PI / 2);
+addBench(4.35, -2.7, Math.PI / 2);
+
+function addFlowerBed(x, z, colors) {
+  worldBox([1.9, 0.12, 0.48], [x, 0.14, z], mat(0x657650));
+  const spacing = 0.3;
+  colors.forEach((color, index) => {
+    const flowerX = x - ((colors.length - 1) * spacing) / 2 + index * spacing;
+    const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.32, 8), mat(0x507045));
+    stem.position.set(flowerX, 0.36, z + (index % 2 ? 0.08 : -0.08));
+    scene.add(stem);
+    const blossom = new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 8), mat(color));
+    blossom.position.set(stem.position.x, 0.55, stem.position.z);
+    blossom.castShadow = true;
+    scene.add(blossom);
+  });
+}
+addFlowerBed(-3.25, -1.55, [0xd64945, 0xf3c85f, 0x6f78b8, 0xd64945, 0xf3c85f]);
+addFlowerBed(3.0, -1.55, [0x6f78b8, 0xf3c85f, 0xd64945, 0x6f78b8, 0xf3c85f]);
+
 // Panneau d’entrée de commune : le nom change régulièrement dans la scène.
 const communeNames = [
   'La Châpelle Bâton',
@@ -219,9 +269,18 @@ const communeContext = communeCanvas.getContext('2d');
 const communeTexture = new THREE.CanvasTexture(communeCanvas);
 communeTexture.colorSpace = THREE.SRGBColorSpace;
 const communeMaterial = new THREE.MeshBasicMaterial({ map: communeTexture, transparent: true, side: THREE.DoubleSide });
+const communeBacking = new THREE.Mesh(
+  new THREE.BoxGeometry(1.4, 0.5, 0.06),
+  new THREE.MeshStandardMaterial({ color: 0xf7f7f2, roughness: 0.8 })
+);
+communeBacking.position.set(4.9, 1.2, 4.3);
+communeBacking.rotation.y = -0.28;
+communeBacking.castShadow = true;
+scene.add(communeBacking);
 const communeSign = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 0.5), communeMaterial);
 communeSign.position.set(4.9, 1.2, 4.3);
 communeSign.rotation.y = -0.28;
+communeSign.translateZ(0.035);
 scene.add(communeSign);
 worldBox([0.06, 0.9, 0.06], [4.9, 0.48, 4.3], stone);
 
@@ -257,7 +316,7 @@ function drawCommuneSign(time) {
 drawCommuneSign(0);
 
 // Quelques arbres encadrent la place sans concurrencer les bâtiments.
-for (const [x, z] of [[-5.2, -2.3], [5.0, -1.65], [-4.8, 2.0], [4.8, 2.5]]) {
+for (const [x, z] of [[-5.2, -2.3], [5.8, -1.65], [-4.8, 2.0], [5.6, 2.5]]) {
   worldBox([0.18, 0.95, 0.18], [x, 0.55, z], stone);
   const crown = new THREE.Mesh(new THREE.ConeGeometry(0.68, 1.45, 8), mat(0x78906c));
   crown.position.set(x, 1.65, z);
