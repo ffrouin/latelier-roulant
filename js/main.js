@@ -4,8 +4,21 @@ import * as THREE from 'three';
 const mount = document.querySelector('#scene');
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(28, 1, 0.1, 100);
-camera.position.set(5.4, 3.6, 8.2);
-camera.lookAt(0, 0.8, 0);
+const cameraTarget = new THREE.Vector3(0, 1.45, -1.1);
+const cameraDirection = new THREE.Vector3(7.2, 5.2, 11.5).sub(cameraTarget).normalize();
+let cameraDistance = 15;
+let orbitAzimuth = Math.atan2(cameraDirection.x, cameraDirection.z);
+let orbitElevation = Math.asin(cameraDirection.y);
+function updateCamera() {
+  const horizontal = Math.cos(orbitElevation) * cameraDistance;
+  camera.position.set(
+    cameraTarget.x + Math.sin(orbitAzimuth) * horizontal,
+    cameraTarget.y + Math.sin(orbitElevation) * cameraDistance,
+    cameraTarget.z + Math.cos(orbitAzimuth) * horizontal,
+  );
+  camera.lookAt(cameraTarget);
+}
+updateCamera();
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -15,6 +28,9 @@ mount.appendChild(renderer.domElement);
 
 const palette = { ink: 0x18211f, orange: 0xee6b3b, green: 0x7d9b76, cream: 0xf3f1e9, metal: 0xd6d2c5 };
 const group = new THREE.Group();
+group.position.x = 1.65;
+group.position.z = 0.95;
+group.scale.setScalar(0.49);
 scene.add(group);
 
 const mat = (color, roughness = 0.78) => new THREE.MeshStandardMaterial({ color, roughness, metalness: 0.05 });
@@ -25,6 +41,15 @@ const box = (size, position, material, radius = 0.08) => {
   mesh.castShadow = true;
   mesh.receiveShadow = true;
   group.add(mesh);
+  return mesh;
+};
+
+const worldBox = (size, position, material) => {
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(...size), material);
+  mesh.position.set(...position);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  scene.add(mesh);
   return mesh;
 };
 
@@ -51,7 +76,7 @@ labelContext.fillText('Roulant', 50 + firstWidth, 120);
 const labelTexture = new THREE.CanvasTexture(labelCanvas);
 labelTexture.colorSpace = THREE.SRGBColorSpace;
 const labelMaterial = new THREE.MeshBasicMaterial({ map: labelTexture, transparent: true, depthWrite: false });
-const sideLabel = new THREE.Mesh(new THREE.PlaneGeometry(2.25, 0.45), labelMaterial);
+const sideLabel = new THREE.Mesh(new THREE.PlaneGeometry(3.0, 0.55), labelMaterial);
 sideLabel.position.set(0, 1.18, -1.085);
 sideLabel.rotation.y = Math.PI;
 sideLabel.renderOrder = 3;
@@ -110,8 +135,84 @@ box([1.05, 0.58, 0.8], [1.2, 0.58, 0.22], mat(palette.green));
 box([0.95, 0.04, 0.62], [1.2, 1.28, 0.65], mat(palette.orange));
 box([0.12, 1.05, 0.12], [1.18, 1.35, 0.3], trim);
 
-const floor = new THREE.Mesh(new THREE.CircleGeometry(5.2, 64), new THREE.MeshStandardMaterial({ color: 0xe5e1d6, roughness: 1 }));
-floor.rotation.x = -Math.PI / 2; floor.position.y = 0.08; floor.receiveShadow = true; scene.add(floor);
+// Place du village : sol pavé, mairie à gauche et église à droite.
+const plaza = new THREE.Mesh(new THREE.PlaneGeometry(14, 12), new THREE.MeshStandardMaterial({ color: 0xd9d4c7, roughness: 1 }));
+plaza.rotation.x = -Math.PI / 2;
+plaza.position.set(0, 0.07, -0.25);
+plaza.receiveShadow = true;
+scene.add(plaza);
+worldBox([14, 0.03, 0.18], [0, 0.09, 1.15], mat(0xb8b2a5));
+worldBox([0.18, 0.03, 12], [-5.2, 0.09, -0.25], mat(0xb8b2a5));
+
+const mairie = mat(0xf1e5c9);
+const roof = mat(0xc76b45);
+const stone = mat(0xb7a99a);
+const church = mat(0xe5e0d5);
+const churchRoof = mat(0x556b63);
+const darkGlass = new THREE.MeshStandardMaterial({ color: 0x30444a, roughness: 0.25, metalness: 0.1 });
+
+worldBox([2.5, 1.55, 1.55], [-3.25, 0.87, -2.75], mairie);
+const mairieRoof = new THREE.Mesh(new THREE.ConeGeometry(1.9, 0.65, 4), roof);
+mairieRoof.rotation.y = Math.PI / 4;
+mairieRoof.position.set(-3.25, 1.93, -2.75);
+mairieRoof.castShadow = true;
+scene.add(mairieRoof);
+worldBox([0.28, 0.85, 0.05], [-3.25, 1.22, -3.55], darkGlass);
+worldBox([0.28, 0.85, 0.05], [-3.25, 1.22, -1.95], darkGlass);
+
+// Drapeau français et enseigne de la mairie.
+worldBox([0.04, 1.1, 0.04], [-3.48, 2.35, -3.59], stone);
+worldBox([0.18, 0.36, 0.03], [-3.25, 2.67, -3.59], mat(0x1d4f91));
+worldBox([0.18, 0.36, 0.03], [-3.05, 2.67, -3.59], mat(0xf4f1e8));
+worldBox([0.18, 0.36, 0.03], [-2.85, 2.67, -3.59], mat(0xd64945));
+const mairieSignCanvas = document.createElement('canvas');
+mairieSignCanvas.width = 800;
+mairieSignCanvas.height = 180;
+const mairieSignContext = mairieSignCanvas.getContext('2d');
+mairieSignContext.fillStyle = '#f8f3e7';
+mairieSignContext.fillRect(0, 0, 800, 180);
+mairieSignContext.fillStyle = '#18211f';
+mairieSignContext.font = '700 100px Arial, sans-serif';
+mairieSignContext.textAlign = 'center';
+mairieSignContext.textBaseline = 'middle';
+mairieSignContext.fillText('MAIRIE', 400, 92);
+const mairieSignTexture = new THREE.CanvasTexture(mairieSignCanvas);
+mairieSignTexture.colorSpace = THREE.SRGBColorSpace;
+const mairieSign = new THREE.Mesh(
+  new THREE.PlaneGeometry(0.95, 0.22),
+  new THREE.MeshBasicMaterial({ map: mairieSignTexture })
+);
+mairieSign.position.set(-1.995, 1.28, -2.75);
+mairieSign.rotation.y = Math.PI / 2;
+scene.add(mairieSign);
+
+worldBox([2.15, 1.85, 1.6], [3.0, 1.02, -2.7], church);
+const churchRoofMesh = new THREE.Mesh(new THREE.ConeGeometry(1.55, 0.7, 4), churchRoof);
+churchRoofMesh.rotation.y = Math.PI / 4;
+churchRoofMesh.position.set(3.0, 2.28, -2.7);
+churchRoofMesh.castShadow = true;
+scene.add(churchRoofMesh);
+worldBox([0.72, 3.05, 0.78], [2.05, 1.57, -2.72], stone);
+const steeple = new THREE.Mesh(new THREE.ConeGeometry(0.58, 1.35, 4), churchRoof);
+steeple.rotation.y = Math.PI / 4;
+steeple.position.set(2.05, 3.78, -2.72);
+steeple.castShadow = true;
+scene.add(steeple);
+worldBox([0.22, 0.85, 0.05], [2.05, 1.45, -3.12], darkGlass);
+worldBox([0.18, 1.0, 0.08], [2.05, 4.55, -2.72], roof);
+worldBox([0.8, 0.12, 0.08], [2.05, 4.55, -2.72], roof);
+
+// Quelques arbres encadrent la place sans concurrencer les bâtiments.
+for (const [x, z] of [[-5.2, -2.3], [5.0, -1.65], [-4.8, 2.0], [4.8, 2.5]]) {
+  worldBox([0.18, 0.95, 0.18], [x, 0.55, z], stone);
+  const crown = new THREE.Mesh(new THREE.ConeGeometry(0.68, 1.45, 8), mat(0x78906c));
+  crown.position.set(x, 1.65, z);
+  crown.castShadow = true;
+  scene.add(crown);
+}
+
+const floor = new THREE.Mesh(new THREE.CircleGeometry(7.5, 64), new THREE.MeshStandardMaterial({ color: 0xe5e1d6, roughness: 1 }));
+floor.rotation.x = -Math.PI / 2; floor.position.y = 0.05; floor.receiveShadow = true; scene.add(floor);
 
 scene.add(new THREE.HemisphereLight(0xfff9ed, 0x68746e, 2.1));
 const key = new THREE.DirectionalLight(0xffeee0, 3.1);
@@ -120,11 +221,45 @@ key.position.set(-4, 7, 5); key.castShadow = true; key.shadow.mapSize.set(1024, 
 const vehicleOrientation = Math.PI;
 let targetRotation = 0.24;
 let pointerRotation = 0.24;
+let isOrbiting = false;
+let lastPointerX = 0;
+let lastPointerY = 0;
 mount.addEventListener('pointermove', (event) => {
+  if (isOrbiting) {
+    const deltaX = event.clientX - lastPointerX;
+    const deltaY = event.clientY - lastPointerY;
+    lastPointerX = event.clientX;
+    lastPointerY = event.clientY;
+    orbitAzimuth -= deltaX * 0.006;
+    orbitElevation = THREE.MathUtils.clamp(orbitElevation + deltaY * 0.004, 0.05, 0.9);
+    updateCamera();
+    return;
+  }
   const rect = mount.getBoundingClientRect();
   targetRotation = 0.24 + ((event.clientX - rect.left) / rect.width - 0.5) * 0.35;
 });
 mount.addEventListener('pointerleave', () => { targetRotation = 0.24; });
+mount.addEventListener('pointerdown', (event) => {
+  isOrbiting = true;
+  lastPointerX = event.clientX;
+  lastPointerY = event.clientY;
+  mount.setPointerCapture(event.pointerId);
+  mount.classList.add('is-orbiting');
+});
+mount.addEventListener('pointerup', (event) => {
+  isOrbiting = false;
+  if (mount.hasPointerCapture(event.pointerId)) mount.releasePointerCapture(event.pointerId);
+  mount.classList.remove('is-orbiting');
+});
+mount.addEventListener('pointercancel', () => {
+  isOrbiting = false;
+  mount.classList.remove('is-orbiting');
+});
+mount.addEventListener('wheel', (event) => {
+  event.preventDefault();
+  cameraDistance = THREE.MathUtils.clamp(cameraDistance + event.deltaY * 0.008, 12, 18);
+  updateCamera();
+}, { passive: false });
 
 function resize() {
   const width = mount.clientWidth;
@@ -139,9 +274,10 @@ resize();
 function animate(time) {
   pointerRotation += (targetRotation - pointerRotation) * 0.045;
   group.rotation.y = vehicleOrientation + pointerRotation + Math.sin(time * 0.00035) * 0.035;
-  group.position.y = -0.35 + Math.sin(time * 0.0012) * 0.035;
+  group.position.y = 0.08 + Math.sin(time * 0.0012) * 0.035;
   renderer.render(scene, camera);
   requestAnimationFrame(animate);
 }
 requestAnimationFrame(animate);
 window.__ATELIER_ROULANT_READY = true;
+window.__ATELIER_ROULANT_CAMERA = camera;
