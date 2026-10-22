@@ -29,6 +29,30 @@ Le port peut être modifié :
 PORT=8080 python3 app.py
 ```
 
+### Envoi des demandes
+
+Après la confirmation humaine, le serveur génère un PDF de synthèse et
+l’envoie à `OWNER_EMAIL`, avec le courriel du demandeur en copie. Configurez
+les variables SMTP avant de lancer le serveur :
+
+```bash
+export OWNER_EMAIL="freddy@linuxtribe.fr"
+export SMTP_HOST="cgpro.linuxtribe.fr"
+export SMTP_PORT="587"
+export SMTP_USERNAME="freddy@linuxtribe.fr"
+export SMTP_PASSWORD="mot-de-passe-fourni-par-le-fournisseur"
+export SMTP_FROM="freddy@linuxtribe.fr"
+export SMTP_STARTTLS="1"
+python3 app.py
+```
+
+`SMTP_PASSWORD` ne doit pas être inscrit dans le dépôt. Sans configuration
+SMTP complète, l’interface signale que l’envoi n’est pas disponible et permet
+de réessayer après configuration du serveur.
+
+Le port `587` est utilisé avec STARTTLS par défaut. Le port `465` est aussi
+possible avec `SMTP_SSL="1"`.
+
 ## Structure
 
 ```text

@@ -581,10 +581,44 @@ humanTarget.addEventListener('click', () => {
   }
   moveHumanTarget();
 });
-humanContinue.addEventListener('click', () => {
+humanContinue.addEventListener('click', async () => {
   if (humanGameRound < 3) return;
-  humanFeedback.textContent = 'Merci. Votre confirmation humaine est enregistrée pour cette demande.';
   humanContinue.disabled = true;
+  humanContinue.textContent = 'Génération et envoi en cours…';
+  humanFeedback.textContent = 'Préparation du PDF et envoi du courriel…';
+  const photoFile = document.querySelector('#detail-photo').files[0];
+  const payload = {
+    service: serviceSelection.textContent.replace('Besoin sélectionné : ', '').replace(/\.$/, ''),
+    object: detailObject.value.trim(),
+    description: detailDescription.value.trim(),
+    town: document.querySelector('#location-town').value.trim(),
+    postcode: document.querySelector('#location-postcode').value.trim(),
+    address: document.querySelector('#location-address').value.trim(),
+    access: document.querySelector('#location-access').value.trim(),
+    availability: document.querySelector('#location-availability').value,
+    urgency: document.querySelector('#location-urgency').value,
+    lastname: document.querySelector('#contact-lastname').value.trim(),
+    firstname: document.querySelector('#contact-firstname').value.trim(),
+    phone: document.querySelector('#contact-phone').value.trim(),
+    email: document.querySelector('#contact-email').value.trim(),
+    photo_name: photoFile?.name || '',
+    human_confirmed: true,
+  };
+  try {
+    const response = await fetch('/api/submit-request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const result = await response.json();
+    if (!response.ok || !result.ok) throw new Error(result.error || 'Envoi impossible.');
+    humanContinue.textContent = 'Demande envoyée';
+    humanFeedback.textContent = `Votre demande a été envoyée. Référence : ${result.request_id}.`;
+  } catch (error) {
+    humanContinue.disabled = false;
+    humanContinue.textContent = 'Réessayer l’envoi →';
+    humanFeedback.textContent = error.message;
+  }
 });
 requestAnimationFrame(animate);
 window.setTimeout(revealWelcome, 700);
