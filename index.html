@@ -88,6 +88,12 @@
     .human-target:hover { transform:scale(1.12); }
     .human-game-status { margin-bottom:18px; color:var(--muted); font:600 .8rem 'Space Grotesk',sans-serif; letter-spacing:.08em; }
     .human-verification .detail-next:disabled { opacity:.45; cursor:not-allowed; }
+    .request-pdf { margin-top:28px; padding-top:24px; border-top:1px solid var(--line); }
+    .request-pdf h4 { margin:0 0 8px; color:var(--ink); font:700 clamp(1.35rem,2.8vw,2rem)/1 'Space Grotesk',sans-serif; letter-spacing:-.04em; }
+    .request-pdf p { margin:0 0 16px; }
+    .request-pdf object { display:block; width:100%; height:520px; border:1px solid var(--line); background:#fff; }
+    .pdf-download { display:inline-block; margin-top:14px; padding:12px 16px; color:#fff; background:var(--ink); cursor:pointer; font:600 .86rem 'DM Sans',sans-serif; text-decoration:none; }
+    .pdf-download:hover { background:var(--accent); }
     .service-footer { display:flex; align-items:center; justify-content:space-between; gap:24px; margin-top:26px; color:var(--muted); font-size:.86rem; }
     .service-back { border:0; padding:0; color:var(--ink); background:none; cursor:pointer; font:600 .86rem 'DM Sans',sans-serif; }
     @media (max-width:850px) { .service-options { grid-template-columns:repeat(2,1fr); } }
@@ -161,7 +167,6 @@
             <label><span>Nom</span><input id="contact-lastname" type="text" autocomplete="family-name" placeholder="Votre nom"></label>
             <label><span>Prénom</span><input id="contact-firstname" type="text" autocomplete="given-name" placeholder="Votre prénom"></label>
             <label><span>Téléphone</span><input id="contact-phone" type="tel" autocomplete="tel" placeholder="06 00 00 00 00"></label>
-            <label><span>Courriel</span><input id="contact-email" type="email" autocomplete="email" placeholder="vous@exemple.fr"></label>
             <label><span>Commune</span><input id="location-town" type="text" placeholder="Ex. Niort, Cherveux, Augé…"></label>
             <label><span>Code postal</span><input id="location-postcode" type="text" inputmode="numeric" placeholder="Ex. 79000"></label>
             <label><span>Adresse ou quartier</span><input id="location-address" type="text" placeholder="Adresse, lieu-dit ou quartier"></label>
@@ -175,7 +180,7 @@
         <div class="service-summary" id="service-summary" hidden>
           <div class="service-kicker">L’Atelier Roulant · étape 4</div>
           <h3>Voici votre demande</h3>
-          <p class="service-intro">Vérifiez les informations avant de poursuivre vers vos coordonnées.</p>
+          <p class="service-intro">Vérifiez les informations avant la confirmation humaine et l’envoi de votre demande.</p>
           <div class="summary-layout">
           <div class="summary-grid">
             <div><span>Besoin</span><strong id="summary-service">—</strong></div>
@@ -188,7 +193,6 @@
             <div><span>Photo</span><strong id="summary-photo">—</strong></div>
             <div><span>Nom et prénom</span><strong id="summary-name">—</strong></div>
             <div><span>Téléphone</span><strong id="summary-phone">—</strong></div>
-            <div><span>Courriel</span><strong id="summary-email">—</strong></div>
           </div>
           <aside class="summary-photo-preview" aria-label="Aperçu de la photo jointe">
             <span>Photo jointe</span>
@@ -207,6 +211,12 @@
             <div class="human-game-status" id="human-game-status" aria-live="polite">0 / 3</div>
             <button class="detail-next" id="human-continue" type="button" disabled>Continuer →</button>
             <div class="detail-feedback" id="human-feedback" aria-live="polite"></div>
+            <div class="request-pdf" id="request-pdf" hidden>
+              <h4>Votre synthèse PDF</h4>
+              <p>Vous pouvez la consulter, la sauvegarder ou la transmettre comme vous le souhaitez.</p>
+              <object id="request-pdf-viewer" type="application/pdf" aria-label="Synthèse PDF de la demande"></object>
+              <a class="pdf-download" id="request-pdf-download" download>Télécharger le PDF</a>
+            </div>
           </div>
         </div>
         <div class="service-footer"><button class="service-back" id="service-home-back" type="button">← Retour à l’accueil</button><span id="service-selection">Sélectionnez une catégorie pour continuer.</span></div>

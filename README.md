@@ -32,7 +32,9 @@ PORT=8080 python3 app.py
 ### Envoi des demandes
 
 Après la confirmation humaine, le serveur génère un PDF de synthèse et
-l’envoie à `OWNER_EMAIL`, avec le courriel du demandeur en copie. Configurez
+l’envoie uniquement à `OWNER_EMAIL` pour la notification backend. Le PDF est
+également renvoyé au navigateur pour être consulté ou téléchargé par l’usager.
+Configurez
 les variables SMTP avant de lancer le serveur :
 
 ```bash

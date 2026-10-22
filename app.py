@@ -29,7 +29,6 @@ def make_pdf(data):
         ("Urgence", data.get("urgency")),
         ("Nom et prénom", f"{data.get('firstname', '')} {data.get('lastname', '')}".strip()),
         ("Téléphone", data.get("phone")),
-        ("Courriel", data.get("email")),
         ("Photo jointe", data.get("photo_name") or "Aucune photo ajoutée"),
     ]
     lines = ["L'ATELIER ROULANT", "Réparer plutôt que remplacer", "Synthèse de la demande", ""]
@@ -89,7 +88,6 @@ def send_request_email(data, pdf_bytes):
     message = EmailMessage()
     message["From"] = environ.get("SMTP_FROM", SMTP_USERNAME)
     message["To"] = OWNER_EMAIL
-    message["Cc"] = data["email"]
     message["Subject"] = f"Nouvelle demande de service — {data['request_id']}"
     message.set_content(
         "Bonjour,\n\n"
@@ -137,7 +135,7 @@ class SiteHandler(SimpleHTTPRequestHandler):
             if length > 200_000:
                 raise ValueError("Requête trop volumineuse")
             data = json.loads(self.rfile.read(length))
-            required = ("service", "firstname", "lastname", "phone", "email", "town", "availability")
+            required = ("service", "firstname", "lastname", "phone", "town", "availability")
             if not all(str(data.get(field, "")).strip() for field in required):
                 raise ValueError("Champs obligatoires manquants")
             if not data.get("human_confirmed"):
@@ -148,7 +146,7 @@ class SiteHandler(SimpleHTTPRequestHandler):
             )
             pdf_bytes = make_pdf(data)
             send_request_email(data, pdf_bytes)
-            self.respond_json(200, {"ok": True, "request_id": data["request_id"]})
+            self.respond_pdf(200, pdf_bytes, data["request_id"])
         except (ValueError, json.JSONDecodeError) as error:
             self.respond_json(400, {"ok": False, "error": str(error)})
         except Exception as error:  # SMTP errors must reach the browser clearly.
@@ -158,6 +156,15 @@ class SiteHandler(SimpleHTTPRequestHandler):
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def respond_pdf(self, status, body, request_id):
+        self.send_response(status)
+        self.send_header("Content-Type", "application/pdf")
+        self.send_header("Content-Disposition", f"inline; filename=demande-{request_id}.pdf")
+        self.send_header("X-Request-ID", request_id)
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)

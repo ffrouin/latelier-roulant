@@ -462,6 +462,9 @@ const humanTarget = document.querySelector('#human-target');
 const humanGameStatus = document.querySelector('#human-game-status');
 const humanContinue = document.querySelector('#human-continue');
 const humanFeedback = document.querySelector('#human-feedback');
+const requestPdf = document.querySelector('#request-pdf');
+const requestPdfViewer = document.querySelector('#request-pdf-viewer');
+const requestPdfDownload = document.querySelector('#request-pdf-download');
 let humanGameRound = 0;
 function moveHumanTarget() {
   const maxX = Math.max(8, humanGame.clientWidth - 42);
@@ -545,13 +548,8 @@ document.querySelector('#location-next').addEventListener('click', () => {
   const lastname = document.querySelector('#contact-lastname').value.trim();
   const firstname = document.querySelector('#contact-firstname').value.trim();
   const phone = document.querySelector('#contact-phone').value.trim();
-  const email = document.querySelector('#contact-email').value.trim();
-  if (!town || !availability || !lastname || !firstname || !phone || !email) {
+  if (!town || !availability || !lastname || !firstname || !phone) {
     locationFeedback.textContent = 'Indiquez la commune, une disponibilité et vos coordonnées.';
-    return;
-  }
-  if (!email.includes('@')) {
-    locationFeedback.textContent = 'Vérifiez votre adresse courriel.';
     return;
   }
   locationFeedback.textContent = '';
@@ -569,7 +567,6 @@ document.querySelector('#location-next').addEventListener('click', () => {
   document.querySelector('#summary-photo').textContent = photo || 'Aucune photo ajoutée';
   document.querySelector('#summary-name').textContent = `${firstname} ${lastname}`;
   document.querySelector('#summary-phone').textContent = phone;
-  document.querySelector('#summary-email').textContent = email;
   const photoImage = document.querySelector('#summary-photo-image');
   const photoEmpty = document.querySelector('#summary-photo-empty');
   if (document.querySelector('#detail-photo').files[0]) {
@@ -584,6 +581,9 @@ document.querySelector('#location-next').addEventListener('click', () => {
   summaryFeedback.textContent = '';
   humanVerification.hidden = true;
   resetHumanGame();
+  requestPdf.hidden = true;
+  requestPdfViewer.removeAttribute('data');
+  requestPdfDownload.removeAttribute('href');
   serviceLocation.hidden = true;
   serviceSummary.hidden = false;
 });
@@ -627,7 +627,6 @@ humanContinue.addEventListener('click', async () => {
     lastname: document.querySelector('#contact-lastname').value.trim(),
     firstname: document.querySelector('#contact-firstname').value.trim(),
     phone: document.querySelector('#contact-phone').value.trim(),
-    email: document.querySelector('#contact-email').value.trim(),
     photo_name: photoFile?.name || '',
     human_confirmed: true,
   };
@@ -637,10 +636,19 @@ humanContinue.addEventListener('click', async () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
-    const result = await response.json();
-    if (!response.ok || !result.ok) throw new Error(result.error || 'Envoi impossible.');
+    if (!response.ok) {
+      const result = await response.json();
+      throw new Error(result.error || 'Envoi impossible.');
+    }
+    const pdfBlob = await response.blob();
+    const pdfUrl = URL.createObjectURL(pdfBlob);
+    const requestId = response.headers.get('X-Request-ID') || 'demande';
+    requestPdfViewer.setAttribute('data', pdfUrl);
+    requestPdfDownload.href = pdfUrl;
+    requestPdfDownload.download = `demande-${requestId}.pdf`;
+    requestPdf.hidden = false;
     humanContinue.textContent = 'Demande envoyée';
-    humanFeedback.textContent = `Votre demande a été envoyée. Référence : ${result.request_id}.`;
+    humanFeedback.textContent = `Votre demande a été envoyée. Référence : ${requestId}.`;
   } catch (error) {
     humanContinue.disabled = false;
     humanContinue.textContent = 'Réessayer l’envoi →';
