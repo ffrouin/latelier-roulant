@@ -66,6 +66,11 @@
     .threat-table th:nth-child(4), .threat-table td:nth-child(4) { width:24%; }
     .threat-table th:nth-child(5), .threat-table td:nth-child(5) { width:10%; }
     .threat-table th:nth-child(6), .threat-table td:nth-child(6) { width:26%; }
+    .traffic-table th:nth-child(1), .traffic-table td:nth-child(1) { width:24%; }
+    .traffic-table th:nth-child(2), .traffic-table td:nth-child(2) { width:20%; }
+    .traffic-table th:nth-child(3), .traffic-table td:nth-child(3) { width:20%; }
+    .traffic-table th:nth-child(4), .traffic-table td:nth-child(4) { width:16%; }
+    .traffic-table th:nth-child(5), .traffic-table td:nth-child(5) { width:20%; }
     .table-wrap { overflow:auto; }
     table { width:100%; table-layout:fixed; border-collapse:collapse; font-size:.76rem; }
     th,td { text-align:left; padding:8px 5px; border-bottom:1px solid var(--line); white-space:normal; overflow-wrap:anywhere; vertical-align:top; }
@@ -113,7 +118,7 @@
       <section><h2>Demandes par besoin</h2><div class="bars" id="services"></div></section>
       <section><h2>Demandes par urgence</h2><div class="bars" id="urgencies"></div></section>
       <section><h2>Disponibilités</h2><div class="bars" id="availability"></div></section>
-      <section><h2>Trafic web</h2><div class="metric-label">Codes HTTP</div><div class="bars" id="web-status"></div><div class="metric-label" style="margin-top:18px">Chemins consultés</div><div class="bars" id="web-paths"></div></section>
+      <section><h2>Trafic web</h2><div class="metric-label">Codes HTTP</div><div class="bars" id="web-status"></div><div class="metric-label" style="margin-top:18px">Chemins consultés</div><div class="bars" id="web-paths"></div><div class="metric-label" style="margin-top:18px">Visiteurs et localisation GeoIP</div><div class="table-wrap"><table class="traffic-table"><thead><tr><th>IP</th><th>Pays</th><th>Ville</th><th>Requêtes</th><th>Dernière activité</th></tr></thead><tbody id="web-visitors"></tbody></table></div></section>
     </div>
     <section><h2>Menaces</h2><p>Détection locale sur les requêtes du processus depuis son démarrage. Les erreurs serveur 5xx sont affichées mais ne sont pas considérées seules comme une menace.</p><div class="table-wrap"><table class="threat-table"><thead><tr><th>IP</th><th>Pays</th><th>Ville</th><th>Raison</th><th>Requêtes</th><th>Chemins observés</th></tr></thead><tbody id="threats"></tbody></table></div></section>
   </div>
@@ -211,6 +216,10 @@
     const target = document.getElementById('threats');
     target.innerHTML = threats?.length ? threats.map(item => `<tr><td>${esc(item.ip)}</td><td>${esc(item.country)}</td><td>${esc(item.city)}</td><td>${esc(item.reason)}</td><td>${number.format(item.requests)}<br><small>${number.format(item.errors)} erreur(s)</small></td><td>${(item.paths || []).map(path => esc(path)).join('<br>')}</td></tr>`).join('') : '<tr><td colspan="6" class="empty">Aucune menace détectée.</td></tr>';
   }
+  function renderVisitors(visitors) {
+    const target = document.getElementById('web-visitors');
+    target.innerHTML = visitors?.length ? visitors.map(item => `<tr><td>${esc(item.ip)}</td><td>${esc(item.country)}</td><td>${esc(item.city)}</td><td>${number.format(item.requests)}</td><td>${esc(item.last_seen)}</td></tr>`).join('') : '<tr><td colspan="5" class="empty">Aucun visiteur enregistré.</td></tr>';
+  }
   function render(data) {
     const r=data.requests, w=data.web;
     document.getElementById('request-count').textContent=number.format(r.count);
@@ -220,7 +229,7 @@
     document.getElementById('updated').textContent=`Mis à jour ${new Date(data.generated_at).toLocaleString('fr-FR')}`;
     document.getElementById('commit').textContent=`Commit chargé : ${data.commit || 'inconnu'}`;
     bars('services',r.by_service); bars('urgencies',r.by_urgency); bars('availability',r.by_availability);
-    bars('web-status',w.by_status); renderPaths(w.by_path_status); renderThreats(data.threats);
+    bars('web-status',w.by_status); renderPaths(w.by_path_status); renderVisitors(w.visitors); renderThreats(data.threats);
     requestItems = r.items || [];
     renderRequests();
   }

@@ -133,6 +133,7 @@ WEB_STATS = {
     "bytes_sent": 0,
     "by_path_status": {},
 }
+WEB_VISITORS = {}
 IP_EVENTS = defaultdict(deque)
 IP_THREAT_WINDOW_SECONDS = 300
 IP_EVENT_MAX = 120
@@ -734,6 +735,20 @@ def collect_admin_stats():
                 path: dict(statuses)
                 for path, statuses in WEB_STATS["by_path_status"].items()
             },
+            "visitors": [
+                {
+                    "ip": ip,
+                    "requests": details["requests"],
+                    "bytes_sent": details["bytes_sent"],
+                    "last_seen": datetime.fromtimestamp(details["last_seen"]).astimezone().isoformat(timespec="seconds"),
+                    **_geoip(ip),
+                }
+                for ip, details in sorted(
+                    WEB_VISITORS.items(),
+                    key=lambda item: item[1]["last_seen"],
+                    reverse=True,
+                )[:200]
+            ],
         }
     def count_by(field):
         values = {}
@@ -801,6 +816,13 @@ class SiteHandler(SimpleHTTPRequestHandler):
             WEB_STATS["by_status"][status] = WEB_STATS["by_status"].get(status, 0) + 1
             path_statuses = WEB_STATS["by_path_status"].setdefault(path, {})
             path_statuses[status] = path_statuses.get(status, 0) + 1
+            visitor = WEB_VISITORS.setdefault(client_ip, {"requests": 0, "bytes_sent": 0, "last_seen": 0})
+            visitor["requests"] += 1
+            visitor["bytes_sent"] += sent
+            visitor["last_seen"] = time.time()
+            if len(WEB_VISITORS) > 2048:
+                oldest_visitor = min(WEB_VISITORS, key=lambda ip: WEB_VISITORS[ip]["last_seen"])
+                WEB_VISITORS.pop(oldest_visitor, None)
             threat_reason = _record_ip_event(client_ip, status_code, path)
             if len(IP_EVENTS) > 2048:
                 oldest_ip = min(IP_EVENTS, key=lambda ip: IP_EVENTS[ip][-1][0] if IP_EVENTS[ip] else 0)

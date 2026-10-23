@@ -83,7 +83,9 @@ La section **Menaces** suit les erreurs 4xx par adresse IP pendant la durée de
 vie du processus. Elle signale les sondes de chemins sensibles, trois erreurs
 4xx consécutives sur plusieurs chemins, ou un volume élevé d’erreurs 4xx en une
 minute. Les erreurs 5xx sont affichées dans le trafic mais ne sont pas
-considérées seules comme une attaque. La géolocalisation est facultative et
+considérées seules comme une attaque. Le bloc **Trafic web** conserve aussi les
+visiteurs vus depuis le démarrage, avec leur pays et leur ville lorsque la base
+GeoIP locale peut les déterminer. La géolocalisation est facultative et
 utilise en priorité une base GeoIP2 `.mmdb`, puis accepte les anciennes bases GeoLite City `.dat` via `GEOIP_LEGACY_DB_PATH` (par exemple `/opt/GeoIPv2/GeoLiteCity.dat`) ; sans bibliothèque ou base compatible, le pays et la ville restent affichés comme non disponibles.
 
 La génération du PDF enrichi utilise Pillow et `qrencode` pour intégrer la
