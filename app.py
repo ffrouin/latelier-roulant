@@ -6,6 +6,7 @@ import hmac
 import io
 import json
 import logging
+import os
 import re
 import shutil
 import smtplib
@@ -369,6 +370,7 @@ def send_request_email(data, pdf_bytes, document_url):
 
 def _pdf_text(pdf_path):
     if not shutil.which("pdftotext"):
+        LOGGER.error("Extraction PDF impossible: pdftotext introuvable")
         return ""
     result = subprocess.run(
         ["pdftotext", "-layout", str(pdf_path), "-"],
@@ -377,7 +379,21 @@ def _pdf_text(pdf_path):
         text=True,
         timeout=5,
     )
-    return result.stdout if result.returncode == 0 else ""
+    if result.returncode != 0:
+        LOGGER.warning(
+            "pdftotext a échoué pour %s (code=%s): %s",
+            pdf_path.name,
+            result.returncode,
+            (result.stderr or "").strip()[:500],
+        )
+        return ""
+    LOGGER.debug(
+        "PDF extrait: fichier=%s caractères=%s lignes=%s",
+        pdf_path.name,
+        len(result.stdout),
+        len(result.stdout.splitlines()),
+    )
+    return result.stdout
 
 
 def _pdf_field(lines, label):
@@ -429,29 +445,51 @@ def collect_admin_stats():
     """Return process web counters and metadata extracted from stored request PDFs."""
     request_rows = []
     scan_errors = 0
+    LOGGER.info(
+        "Scan PDF admin: dossier=%s existe=%s lisible=%s",
+        REQUEST_STORAGE_DIR,
+        REQUEST_STORAGE_DIR.is_dir(),
+        os.access(REQUEST_STORAGE_DIR, os.R_OK) if REQUEST_STORAGE_DIR.exists() else False,
+    )
     if REQUEST_STORAGE_DIR.is_dir():
         pdf_paths = sorted(REQUEST_STORAGE_DIR.glob("[A-F0-9][A-F0-9][A-F0-9][A-F0-9][A-F0-9][A-F0-9][A-F0-9][A-F0-9][A-F0-9][A-F0-9][A-F0-9][A-F0-9].pdf"))
     else:
         pdf_paths = []
+    LOGGER.info("Scan PDF admin: %s fichier(s) correspondant au motif", len(pdf_paths))
     for pdf_path in pdf_paths:
         try:
             text = _pdf_text(pdf_path)
             lines = [line.strip() for line in text.splitlines() if line.strip()]
             modified_at = datetime.fromtimestamp(pdf_path.stat().st_mtime).astimezone().isoformat(timespec="seconds")
             postcode, town = _pdf_location_parts(lines)
+            service = _pdf_field(lines, "BESOIN")
+            availability = _pdf_field(lines, "DISPONIBILITÉ")
+            urgency = _pdf_field(lines, "URGENCE")
+            LOGGER.info(
+                "PDF analysé: fichier=%s caractères=%s lignes=%s besoin=%s disponibilité=%s urgence=%s code_postal=%s commune=%s",
+                pdf_path.name,
+                len(text),
+                len(lines),
+                bool(service),
+                bool(availability),
+                bool(urgency),
+                bool(postcode),
+                bool(town),
+            )
             request_rows.append({
                 "reference": pdf_path.stem,
                 "date": _pdf_field(lines, "DATE") or _pdf_field(lines, "DATE TIMESTAMP") or modified_at,
-                "service": _pdf_field(lines, "BESOIN"),
-                "availability": _pdf_field(lines, "DISPONIBILITÉ"),
-                "urgency": _pdf_field(lines, "URGENCE"),
+                "service": service,
+                "availability": availability,
+                "urgency": urgency,
                 "postcode": postcode,
                 "town": town,
                 "size_bytes": pdf_path.stat().st_size,
                 "modified_at": modified_at,
             })
-        except (OSError, subprocess.SubprocessError):
+        except (OSError, subprocess.SubprocessError, ValueError):
             scan_errors += 1
+            LOGGER.exception("Erreur pendant l'analyse du PDF %s", pdf_path.name)
 
     with WEB_STATS_LOCK:
         web = {
