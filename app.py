@@ -26,9 +26,32 @@ OWNER_EMAIL = environ.get("OWNER_EMAIL", "freddy@linuxtribe.fr")
 SMTP_HOST = environ.get("SMTP_HOST", "cgpro.linuxtribe.fr")
 SMTP_USERNAME = environ.get("SMTP_USERNAME", OWNER_EMAIL)
 PUBLIC_BASE_URL = environ.get("PUBLIC_BASE_URL", "https://atelier-roulant.linuxtribe.fr").rstrip("/")
-REQUEST_STORAGE_DIR = Path(environ.get("REQUEST_STORAGE_DIR", ROOT / "data" / "requests"))
+DEFAULT_REQUEST_STORAGE_DIR = ROOT / "requests" if (ROOT / "requests").is_dir() else ROOT / "data" / "requests"
+REQUEST_STORAGE_DIR = Path(environ.get("REQUEST_STORAGE_DIR", str(DEFAULT_REQUEST_STORAGE_DIR)))
 ADMIN_USERNAME = environ.get("ADMIN_USERNAME", "admin")
 ADMIN_PASSWORD = environ.get("ADMIN_PASSWORD", "")
+def get_commit_reference():
+    try:
+        commit = subprocess.run(
+            ["git", "-C", str(ROOT), "rev-parse", "--short", "HEAD"],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=2,
+        ).stdout.strip()
+        dirty = subprocess.run(
+            ["git", "-C", str(ROOT), "status", "--porcelain"],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=2,
+        ).stdout.strip()
+        return f"{commit}-dirty" if dirty else commit
+    except (OSError, subprocess.SubprocessError):
+        return "inconnu"
+
+
+APP_COMMIT = get_commit_reference()
 SERVER_STARTED_AT = time.time()
 WEB_STATS_LOCK = threading.Lock()
 WEB_STATS = {
@@ -389,6 +412,7 @@ def collect_admin_stats():
         return dict(sorted(values.items(), key=lambda item: (-item[1], item[0])))
 
     return {
+        "commit": APP_COMMIT,
         "generated_at": datetime.now().astimezone().isoformat(timespec="seconds"),
         "server_started_at": datetime.fromtimestamp(SERVER_STARTED_AT).astimezone().isoformat(timespec="seconds"),
         "uptime_seconds": round(time.time() - SERVER_STARTED_AT),

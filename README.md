@@ -56,6 +56,12 @@ python3 app.py
 SMTP complète, l’interface signale que l’envoi n’est pas disponible et permet
 de réessayer après configuration du serveur.
 
+En production, si le dépôt est installé dans `/opt/latelier-roulant` et que les
+PDF sont stockés dans `/opt/latelier-roulant/requests`, définissez explicitement
+`REQUEST_STORAGE_DIR=/opt/latelier-roulant/requests`. À défaut, l’application
+utilise automatiquement le dossier `requests/` s’il existe à côté de `app.py`,
+et conserve `data/requests/` comme repli pour le développement local historique.
+
 ### Administration
 
 La page `/admin` est protégée par une authentification HTTP Basic. Elle est

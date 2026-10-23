@@ -9,13 +9,18 @@
     * { box-sizing:border-box; }
     body { margin:0; background:var(--paper); color:var(--ink); font-family:Inter,system-ui,-apple-system,sans-serif; }
     main { width:min(1280px,100%); margin:0 auto; padding:38px 24px 56px; }
-    header { border-top:4px solid var(--accent); padding:20px 0 28px; display:flex; align-items:end; justify-content:space-between; gap:20px; }
+    header { border-top:4px solid var(--accent); padding:22px 0 30px; display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:32px; }
     h1 { margin:0; font-size:clamp(1.8rem,4vw,3rem); letter-spacing:-.04em; }
     h2 { margin:0 0 16px; font-size:1rem; text-transform:uppercase; letter-spacing:.12em; color:var(--accent); }
     p { color:var(--muted); }
     button { border:0; background:var(--ink); color:#fff; padding:10px 15px; border-radius:5px; cursor:pointer; }
     button:hover { background:var(--accent); }
-    .meta { color:var(--muted); font-size:.86rem; text-align:right; }
+    .header-tools { display:flex; align-items:center; justify-content:flex-end; gap:12px; }
+    .header-status { min-width:220px; padding:9px 12px; border-left:2px solid var(--accent); color:var(--muted); font-size:.76rem; line-height:1.35; }
+    .header-status span, .commit-ref span { display:block; margin-bottom:3px; color:var(--muted); font-size:.66rem; letter-spacing:.1em; text-transform:uppercase; }
+    .header-status strong { color:var(--ink); font-weight:500; }
+    .commit-ref { min-width:150px; padding:9px 12px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--ink); font-size:.78rem; font-family:ui-monospace,SFMono-Regular,monospace; }
+    .commit-ref code { font:inherit; }
     .cards { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:26px; }
     .card, section { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:20px; }
     .metric { font-size:2rem; font-weight:700; letter-spacing:-.05em; }
@@ -46,7 +51,7 @@
     .delete-action { color:#a22b20; }
     .empty { color:var(--muted); padding:12px 0; }
     .error { color:#a22b20; background:#fff0ed; border:1px solid #f0c4ba; padding:12px; border-radius:5px; }
-    @media (max-width:850px) { .cards { grid-template-columns:repeat(2,1fr); } .grid { grid-template-columns:1fr; } header { align-items:start; flex-direction:column; } .meta { text-align:left; } }
+    @media (max-width:850px) { .cards { grid-template-columns:repeat(2,1fr); } .grid { grid-template-columns:1fr; } header { grid-template-columns:1fr; align-items:start; } .header-tools { justify-content:flex-start; flex-wrap:wrap; } }
     @media (max-width:480px) { .cards { grid-template-columns:1fr 1fr; } main { padding:24px 14px 40px; } .card,section { padding:15px; } }
   </style>
 </head>
@@ -54,7 +59,7 @@
 <main>
   <header>
     <div><h1>Administration</h1><p>Statistiques de L’Atelier Roulant</p></div>
-    <div><button id="refresh">Actualiser</button><div class="meta" id="updated">Chargement…</div></div>
+    <div class="header-tools"><button id="refresh">Actualiser</button><div class="header-status"><span>Dernière mise à jour</span><strong id="updated">Chargement…</strong></div><div class="commit-ref"><span>Version chargée</span><code id="commit">—</code></div></div>
   </header>
   <div id="error"></div>
   <div class="cards">
@@ -67,7 +72,7 @@
     <section><h2>Demandes par besoin</h2><div class="bars" id="services"></div></section>
     <section><h2>Demandes par urgence</h2><div class="bars" id="urgencies"></div></section>
     <section><h2>Disponibilités</h2><div class="bars" id="availability"></div></section>
-    <section><h2>Trafic web</h2><div class="bars" id="web-breakdown"></div></section>
+    <section><h2>Trafic web</h2><div class="metric-label">Codes HTTP</div><div class="bars" id="web-status"></div><div class="metric-label" style="margin-top:18px">Chemins consultés</div><div class="bars" id="web-paths"></div></section>
   </div>
   <section><h2>PDF analysés dans le dossier de demandes</h2><div class="table-wrap"><table><thead><tr><th><button data-sort="reference">Référence ↕</button></th><th><button data-sort="date">Date ↕</button></th><th><button data-sort="postcode">CODE POSTAL ↕</button></th><th><button data-sort="town">COMMUNE ↕</button></th><th><button data-sort="service">Besoin ↕</button></th><th><button data-sort="availability">Disponibilité ↕</button></th><th><button data-sort="urgency">Urgence ↕</button></th><th><button data-sort="size_bytes">Taille ↕</button></th><th class="actions">Actions</th></tr></thead><tbody id="requests"></tbody></table></div></section>
 </main>
@@ -107,8 +112,9 @@
     document.getElementById('uptime').textContent=fmtDuration(data.uptime_seconds);
     document.getElementById('storage').textContent=fmtBytes(r.total_bytes);
     document.getElementById('updated').textContent=`Mis à jour ${new Date(data.generated_at).toLocaleString('fr-FR')}`;
+    document.getElementById('commit').textContent=`Commit chargé : ${data.commit || 'inconnu'}`;
     bars('services',r.by_service); bars('urgencies',r.by_urgency); bars('availability',r.by_availability);
-    bars('web-breakdown',{...w.by_path});
+    bars('web-status',w.by_status); bars('web-paths',w.by_path);
     requestItems = r.items || [];
     renderRequests();
   }
