@@ -31,6 +31,12 @@ REQUEST_STORAGE_DIR = Path(environ.get("REQUEST_STORAGE_DIR", str(DEFAULT_REQUES
 ADMIN_USERNAME = environ.get("ADMIN_USERNAME", "admin")
 ADMIN_PASSWORD = environ.get("ADMIN_PASSWORD", "")
 def get_commit_reference():
+    git_dir = ROOT / ".git"
+    if git_dir.is_file():
+        try:
+            git_dir = (ROOT / git_dir.read_text(encoding="utf-8").strip().split(" ", 1)[1]).resolve()
+        except (OSError, IndexError):
+            return "inconnu"
     try:
         commit = subprocess.run(
             ["git", "-C", str(ROOT), "rev-parse", "--short", "HEAD"],
@@ -39,15 +45,26 @@ def get_commit_reference():
             text=True,
             timeout=2,
         ).stdout.strip()
-        dirty = subprocess.run(
-            ["git", "-C", str(ROOT), "status", "--porcelain"],
-            check=True,
-            capture_output=True,
-            text=True,
-            timeout=2,
-        ).stdout.strip()
-        return f"{commit}-dirty" if dirty else commit
+        return commit
     except (OSError, subprocess.SubprocessError):
+        try:
+            head = (git_dir / "HEAD").read_text(encoding="utf-8").strip()
+            if head.startswith("ref: "):
+                ref = head[6:]
+                ref_path = git_dir / ref
+                if ref_path.is_file():
+                    return ref_path.read_text(encoding="ascii").strip()[:12]
+                packed_refs = git_dir / "packed-refs"
+                if packed_refs.is_file():
+                    for line in packed_refs.read_text(encoding="ascii").splitlines():
+                        if line and not line.startswith("#") and not line.startswith("^"):
+                            commit_hash, packed_ref = line.split(" ", 1)
+                            if packed_ref == ref:
+                                return commit_hash[:12]
+            if re.fullmatch(r"[0-9a-f]{7,40}", head):
+                return head[:12]
+        except (OSError, UnicodeError, ValueError):
+            pass
         return "inconnu"
 
 

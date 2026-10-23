@@ -68,7 +68,7 @@ La page `/admin` est protégée par une authentification HTTP Basic. Elle est
 désactivée si `ADMIN_PASSWORD` n’est pas défini. Elle affiche les compteurs web
 depuis le démarrage du processus et analyse les PDF présents dans
 `REQUEST_STORAGE_DIR` pour présenter le nombre de demandes, les répartitions
-par besoin/disponibilité/urgence, le tri de chaque colonne et la liste des documents. Chaque ligne permet d’ouvrir le PDF ou de le supprimer après confirmation. La suppression est protégée par l’authentification administrateur et agit uniquement sur le fichier PDF runtime. Le mot de passe administrateur doit rester dans l’environnement systemd ou nginx, jamais dans Git. Les compteurs web sont remis à zéro lors d’un redémarrage du service.
+par besoin/disponibilité/urgence, le tri de chaque colonne et la liste des documents. Chaque ligne permet d’ouvrir le PDF ou de le supprimer après confirmation. La suppression est protégée par l’authentification administrateur et agit uniquement sur le fichier PDF runtime. Le mot de passe administrateur doit rester dans l’environnement systemd ou nginx, jamais dans Git. Les compteurs web sont remis à zéro lors d’un redémarrage du service. La référence du commit est récupérée automatiquement par `app.py` depuis le dépôt Git local, y compris sans exécuter la commande `git` lorsque les métadonnées `.git` sont accessibles.
 
 Le port `587` est utilisé avec STARTTLS par défaut. Le port `465` est aussi
 possible avec `SMTP_SSL="1"`.
