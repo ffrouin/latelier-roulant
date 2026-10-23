@@ -134,9 +134,12 @@ WEB_STATS = {
     "by_path_status": {},
 }
 WEB_VISITORS = {}
+WEB_PATH_LAST_SEEN = {}
 IP_EVENTS = defaultdict(deque)
+THREAT_HISTORY = {}
 IP_THREAT_WINDOW_SECONDS = 300
 IP_EVENT_MAX = 120
+WEB_404_RETENTION_SECONDS = 3600
 GEOIP_READER = None
 GEOIP_LEGACY_READER = None
 GEOIP_CACHE = {}
@@ -716,33 +719,42 @@ def geoip_diagnostics():
 
 
 def collect_threats():
-    now = time.time()
-    threats = []
     with WEB_STATS_LOCK:
-        event_snapshots = {ip: list(events) for ip, events in IP_EVENTS.items()}
-    for ip, events in event_snapshots.items():
-        recent = [event for event in events if event[0] >= now - IP_THREAT_WINDOW_SECONDS]
-        if not recent:
-            continue
-        reason = _threat_reason(recent, now)
-        if not reason:
-            continue
-        geo = _geoip(ip)
-        status_counts = {}
-        for _, status, _ in recent:
-            status_counts[str(status)] = status_counts.get(str(status), 0) + 1
+        snapshots = list(THREAT_HISTORY.values())
+    threats = []
+    for item in snapshots:
+        geo = _geoip(item["ip"])
         threats.append({
-            "ip": ip,
+            **item,
             "country": geo["country"],
             "city": geo["city"],
-            "reason": reason,
-            "requests": len(recent),
-            "errors": sum(1 for _, status, _ in recent if 400 <= status < 500),
-            "status_counts": status_counts,
-            "paths": list(dict.fromkeys(path for _, _, path in recent))[-8:],
-            "last_seen": datetime.fromtimestamp(recent[-1][0]).astimezone().isoformat(timespec="seconds"),
+            "first_seen": datetime.fromtimestamp(item["first_seen_epoch"]).astimezone().isoformat(timespec="seconds"),
+            "last_seen": datetime.fromtimestamp(item["last_seen_epoch"]).astimezone().isoformat(timespec="seconds"),
         })
     return sorted(threats, key=lambda item: item["last_seen"], reverse=True)
+
+
+def record_threat_history(ip, reason, status, path):
+    now = time.time()
+    key = (ip, reason)
+    item = THREAT_HISTORY.setdefault(key, {
+        "ip": ip,
+        "reason": reason,
+        "requests": 0,
+        "errors": 0,
+        "status_counts": {},
+        "paths": [],
+        "first_seen_epoch": now,
+        "last_seen_epoch": now,
+    })
+    item["requests"] += 1
+    item["errors"] += int(400 <= status < 500)
+    item["status_counts"][str(status)] = item["status_counts"].get(str(status), 0) + 1
+    item["paths"] = list(dict.fromkeys([*item["paths"], path]))[-8:]
+    item["last_seen_epoch"] = now
+    while len(THREAT_HISTORY) > 2048:
+        oldest_key = min(THREAT_HISTORY, key=lambda candidate: THREAT_HISTORY[candidate]["last_seen_epoch"])
+        THREAT_HISTORY.pop(oldest_key, None)
 
 
 def collect_admin_stats():
@@ -801,6 +813,17 @@ def collect_admin_stats():
             LOGGER.exception("Erreur pendant l'analyse du PDF %s", pdf_path.name)
 
     with WEB_STATS_LOCK:
+        now = time.time()
+        visible_path_status = {}
+        for path, statuses in WEB_STATS["by_path_status"].items():
+            visible_statuses = {
+                status: count
+                for status, count in statuses.items()
+                if status != "404"
+                or now - WEB_PATH_LAST_SEEN.get((path, status), now) < WEB_404_RETENTION_SECONDS
+            }
+            if visible_statuses:
+                visible_path_status[path] = visible_statuses
         web = {
             "total_requests": WEB_STATS["total_requests"],
             "by_method": dict(WEB_STATS["by_method"]),
@@ -809,7 +832,7 @@ def collect_admin_stats():
             "bytes_sent": WEB_STATS["bytes_sent"],
             "by_path_status": {
                 path: dict(statuses)
-                for path, statuses in WEB_STATS["by_path_status"].items()
+                for path, statuses in visible_path_status.items()
             },
             "visitors": [
                 {
@@ -894,6 +917,7 @@ class SiteHandler(SimpleHTTPRequestHandler):
             WEB_STATS["by_status"][status] = WEB_STATS["by_status"].get(status, 0) + 1
             path_statuses = WEB_STATS["by_path_status"].setdefault(path, {})
             path_statuses[status] = path_statuses.get(status, 0) + 1
+            WEB_PATH_LAST_SEEN[(path, status)] = time.time()
             visitor = WEB_VISITORS.setdefault(client_ip, {"requests": 0, "bytes_sent": 0, "last_seen": 0})
             visitor["requests"] += 1
             visitor["bytes_sent"] += sent
@@ -906,6 +930,8 @@ class SiteHandler(SimpleHTTPRequestHandler):
                 oldest_ip = min(IP_EVENTS, key=lambda ip: IP_EVENTS[ip][-1][0] if IP_EVENTS[ip] else 0)
                 IP_EVENTS.pop(oldest_ip, None)
         if threat_reason:
+            with WEB_STATS_LOCK:
+                record_threat_history(client_ip, threat_reason, status_code, path)
             LOGGER.warning(
                 "Menace potentielle: ip=%s raison=%s chemin=%s statut=%s",
                 client_ip,
