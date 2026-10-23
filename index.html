@@ -57,12 +57,22 @@
     #scene canvas { display:block; width:100%; height:100%; }
     .service-scene { position:fixed; inset:0; z-index:20; display:block; overflow-y:auto; overscroll-behavior:contain; padding:96px clamp(24px,6vw,96px) 48px; background:var(--paper); opacity:0; transform:translateY(18px); pointer-events:none; transition:opacity .8s ease, transform .8s ease; }
     .service-scene.is-visible { opacity:1; transform:translateY(0); pointer-events:auto; }
-    .mairie-scene { position:fixed; inset:0; z-index:30; display:grid; place-items:center; padding:40px 24px; background:var(--paper); opacity:0; transform:translateY(18px); pointer-events:none; transition:opacity .8s ease, transform .8s ease; }
+    .mairie-scene { position:fixed; inset:0; z-index:30; display:grid; place-items:start; overflow-y:auto; padding:40px 24px; background:var(--paper); opacity:0; transform:translateY(18px); pointer-events:none; transition:opacity .8s ease, transform .8s ease; }
     .mairie-scene.is-visible { opacity:1; transform:translateY(0); pointer-events:auto; }
-    .mairie-content { width:min(820px,100%); padding:clamp(28px,6vw,72px); border:1px solid var(--line); background:rgba(255,255,255,.72); box-shadow:0 18px 45px rgba(24,33,31,.1); }
+    .mairie-content { width:min(980px,100%); margin:auto; padding:clamp(28px,6vw,72px); border:1px solid var(--line); background:rgba(255,255,255,.72); box-shadow:0 18px 45px rgba(24,33,31,.1); }
     .mairie-content h2 { margin:0; font:700 clamp(2.2rem,6vw,5.4rem)/.92 'Space Grotesk',sans-serif; letter-spacing:-.07em; }
     .mairie-content h2 em { color:var(--accent); font-style:normal; }
-    .mairie-content p { max-width:600px; margin:24px 0 30px; color:var(--muted); font-size:1.05rem; line-height:1.55; }
+    .mairie-content h3 { margin:38px 0 12px; color:var(--ink); font:600 clamp(1.35rem,2.5vw,2rem)/1 'Space Grotesk',sans-serif; letter-spacing:-.04em; }
+    .mairie-content p { max-width:760px; margin:24px 0 18px; color:var(--muted); font-size:1.05rem; line-height:1.55; }
+    .mairie-intro { max-width:700px !important; color:#40504a !important; font-size:clamp(1.15rem,2vw,1.45rem) !important; }
+    .mairie-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px 22px; max-width:760px; margin:18px 0 0; padding:0; list-style:none; color:var(--muted); }
+    .mairie-list li { position:relative; padding-left:20px; line-height:1.45; }
+    .mairie-list li::before { content:'+'; position:absolute; left:0; color:var(--accent); font-weight:700; }
+    .mairie-schedule { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:1px; max-width:760px; margin-top:20px; border:1px solid var(--line); background:var(--line); }
+    .mairie-day { min-height:110px; padding:16px; background:#fff; }
+    .mairie-day strong { display:block; margin-bottom:10px; color:var(--accent); font:600 1.1rem 'Space Grotesk',sans-serif; }
+    .mairie-day span { color:var(--muted); font-size:.86rem; line-height:1.35; }
+    .mairie-contact { margin-top:22px !important; }
     .mairie-back { border:0; padding:12px 18px; color:#fff; background:var(--ink); font:600 .86rem 'DM Sans',sans-serif; cursor:pointer; }
     .mairie-back:hover { background:var(--accent); }
     .process-progress { position:absolute; top:24px; left:clamp(24px,6vw,96px); right:clamp(24px,6vw,96px); z-index:2; }
@@ -137,7 +147,7 @@
     .service-back { border:0; padding:0; color:var(--ink); background:none; cursor:pointer; font:600 .86rem 'DM Sans',sans-serif; }
     @media (max-width:850px) { .service-options { grid-template-columns:repeat(2,1fr); } }
     @media (max-width:720px) { .summary-layout { grid-template-columns:1fr; } .request-pdf-layout { grid-template-columns:1fr; } }
-    @media (max-width:520px) { .service-scene { overflow:auto; align-items:start; padding-top:110px; } .service-options { grid-template-columns:1fr; } .service-option { min-height:auto; } .service-footer { align-items:flex-start; flex-direction:column-reverse; } .detail-fields { grid-template-columns:1fr; } .detail-fields label:nth-child(2) { grid-column:auto; } .summary-grid { grid-template-columns:1fr; } }
+    @media (max-width:520px) { .service-scene { overflow:auto; align-items:start; padding-top:110px; } .service-options { grid-template-columns:1fr; } .service-option { min-height:auto; } .service-footer { align-items:flex-start; flex-direction:column-reverse; } .detail-fields { grid-template-columns:1fr; } .detail-fields label:nth-child(2) { grid-column:auto; } .summary-grid { grid-template-columns:1fr; } .mairie-scene { padding:24px 14px; } .mairie-content { padding:28px 20px; } .mairie-list { grid-template-columns:1fr; } .mairie-schedule { grid-template-columns:repeat(2,minmax(0,1fr)); } }
     .services { background:#fff; padding:100px clamp(24px,5vw,76px); }
     .section-head { max-width:1440px; margin:0 auto 48px; display:flex; justify-content:space-between; gap:32px; align-items:end; }
     .section-head h2 { font:600 clamp(2.4rem,5vw,4.8rem)/.95 'Space Grotesk',sans-serif; letter-spacing:-.06em; margin:0; }
@@ -288,8 +298,18 @@
   <section class="mairie-scene" id="mairie-scene" aria-labelledby="mairie-title" hidden>
     <div class="mairie-content">
       <div class="eyebrow">L’Atelier Roulant · collectivités</div>
-      <h2 id="mairie-title">Informations <em>Mairies</em></h2>
-      <p>Un espace dédié aux communes et aux collectivités pour découvrir nos actions de réparation, de réemploi et de service de proximité.</p>
+      <h2 id="mairie-title">Ramener un service de proximité <em>au cœur des communes</em></h2>
+      <p class="mairie-intro">Face à l’éloignement progressif des services publics et des services de proximité dans les territoires ruraux, maintenir une présence humaine au contact des habitants devient essentiel.</p>
+      <p>Cette présence est particulièrement importante pour les personnes à mobilité réduite, les habitants qui ne disposent pas facilement d’un moyen de transport ou celles et ceux qui ne se servent pas d’Internet pour effectuer leurs démarches.</p>
+      <h3>Une présence régulière, directement dans les communes</h3>
+      <p>L’Atelier Roulant souhaite construire, avec les communes, une tournée hebdomadaire de proximité. Le principe est simple&nbsp;: une demi-journée par semaine dans chaque commune partenaire, afin d’apporter un point de contact accessible, humain et concret.</p>
+      <ul class="mairie-list"><li>écoute et orientation des habitants&nbsp;;</li><li>aide à l’identification d’un besoin&nbsp;;</li><li>réparation et dépannage&nbsp;;</li><li>accompagnement vers le réemploi&nbsp;;</li><li>relais vers les services et initiatives locales.</li></ul>
+      <h3>Construire une tournée sur quatre communes</h3>
+      <p>L’objectif initial serait d’organiser une tournée hebdomadaire sur quatre communes. Les modalités restent à construire avec chaque mairie, selon les besoins locaux, les lieux disponibles et les initiatives déjà présentes.</p>
+      <div class="mairie-schedule" aria-label="Exemple d’organisation hebdomadaire"><div class="mairie-day"><strong>Lundi</strong><span>Commune partenaire</span></div><div class="mairie-day"><strong>Mardi</strong><span>Commune partenaire</span></div><div class="mairie-day"><strong>Jeudi</strong><span>Commune partenaire</span></div><div class="mairie-day"><strong>Vendredi</strong><span>Commune partenaire</span></div></div>
+      <h3>Compléter les initiatives existantes</h3>
+      <p>Cette démarche n’a pas vocation à se substituer aux services publics, aux associations ou aux dispositifs existants. Elle peut au contraire les compléter, renforcer leur visibilité et rejoindre une dynamique locale déjà engagée.</p>
+      <p class="mairie-contact">Vous représentez une mairie ou une initiative locale intéressée&nbsp;? Contactez L’Atelier Roulant pour échanger sur les besoins de votre commune et étudier la possibilité d’intégrer une tournée hebdomadaire.</p>
       <button class="mairie-back" id="mairie-back" type="button">← Retour à l’accueil</button>
     </div>
   </section>
