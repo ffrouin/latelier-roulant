@@ -1,9 +1,11 @@
 """Serveur HTTP local pour L’Atelier Roulant."""
 
 import base64
+from collections import defaultdict, deque
 from datetime import datetime
 import hmac
 import ipaddress
+import importlib
 import io
 import json
 import logging
@@ -41,6 +43,8 @@ DEFAULT_REQUEST_STORAGE_DIR = ROOT / "requests" if (ROOT / "requests").is_dir() 
 REQUEST_STORAGE_DIR = Path(environ.get("REQUEST_STORAGE_DIR", str(DEFAULT_REQUEST_STORAGE_DIR)))
 ADMIN_USERNAME = environ.get("ADMIN_USERNAME", "admin")
 ADMIN_PASSWORD = environ.get("ADMIN_PASSWORD", "")
+GEOIP_DB_PATH = environ.get("GEOIP_DB_PATH", "/usr/share/GeoIP/GeoLite2-City.mmdb")
+GEOIP_LEGACY_DB_PATH = environ.get("GEOIP_LEGACY_DB_PATH", "")
 def get_commit_reference():
     git_dir = ROOT / ".git"
     LOGGER.info("Recherche du commit: root=%s git=%s existe=%s", ROOT, git_dir, git_dir.exists())
@@ -119,7 +123,14 @@ WEB_STATS = {
     "by_path": {},
     "by_status": {},
     "bytes_sent": 0,
+    "by_path_status": {},
 }
+IP_EVENTS = defaultdict(deque)
+IP_THREAT_WINDOW_SECONDS = 300
+IP_EVENT_MAX = 120
+GEOIP_READER = None
+GEOIP_LEGACY_READER = None
+GEOIP_CACHE = {}
 
 
 def pdf_text(value):
@@ -442,6 +453,119 @@ def _pdf_location_parts(lines):
     return "", ""
 
 
+def _is_sensitive_probe(path):
+    lowered = path.lower()
+    return lowered.startswith((
+        "/.git", "/.env", "/app.py", "/wp-admin", "/wp-login", "/xmlrpc.php",
+        "/phpmyadmin", "/server-status", "/config", "/backup", "/data/",
+    ))
+
+
+def _threat_reason(events, now):
+    client_errors = [event for event in events if 400 <= event[1] < 500]
+    recent_errors = [event for event in client_errors if event[0] >= now - 60]
+    sensitive_count = sum(1 for event in events if _is_sensitive_probe(event[2]))
+    distinct_error_paths = {event[2] for event in recent_errors}
+    consecutive_errors = 0
+    for event in reversed(events):
+        if 400 <= event[1] < 500:
+            consecutive_errors += 1
+        else:
+            break
+    if sensitive_count >= 2:
+        return "Sonde de chemins sensibles"
+    if consecutive_errors >= 3 and len(distinct_error_paths) >= 2:
+        return "Erreurs 4xx consécutives sur plusieurs chemins"
+    if len(recent_errors) >= 8 and len(distinct_error_paths) >= 4:
+        return "Nombre élevé d’erreurs 4xx en une minute"
+    return ""
+
+
+def _record_ip_event(ip, status, path):
+    """Track bounded request history and return a current threat reason, if any."""
+    now = time.time()
+    events = IP_EVENTS[ip]
+    cutoff = now - IP_THREAT_WINDOW_SECONDS
+    while events and events[0][0] < cutoff:
+        events.popleft()
+    events.append((now, status, path))
+    while len(events) > IP_EVENT_MAX:
+        events.popleft()
+    return _threat_reason(events, now)
+
+
+def _geoip(ip):
+    """Return optional country/city data without making a network lookup."""
+    cached = GEOIP_CACHE.get(ip)
+    if cached is not None:
+        return cached
+    result = {"country": "—", "city": "—"}
+    try:
+        global GEOIP_READER, GEOIP_LEGACY_READER
+        if Path(GEOIP_DB_PATH).is_file():
+            if GEOIP_READER is None:
+                geoip_database = importlib.import_module("geoip2.database")
+                GEOIP_READER = geoip_database.Reader(GEOIP_DB_PATH)
+            response = GEOIP_READER.city(ip)
+            result = {
+                "country": response.country.name or response.country.iso_code or "—",
+                "city": response.city.name or "—",
+            }
+        else:
+            legacy_paths = [
+                GEOIP_LEGACY_DB_PATH,
+                "/opt/GeoIPv2/GeoLiteCity.dat",
+                "/opt/GeoIPv1/GeoLiteCity.dat",
+                "/usr/share/GeoIP/GeoLiteCity.dat",
+            ]
+            legacy_path = next((path for path in legacy_paths if path and Path(path).is_file()), "")
+            if legacy_path:
+                if GEOIP_LEGACY_READER is None:
+                    legacy_database = importlib.import_module("GeoIP")
+                    GEOIP_LEGACY_READER = legacy_database.open(legacy_path, legacy_database.GEOIP_STANDARD)
+                record = GEOIP_LEGACY_READER.record_by_addr(ip) or {}
+                result = {
+                    "country": record.get("country_name") or record.get("country_code") or "—",
+                    "city": record.get("city") or "—",
+                }
+    except (ImportError, OSError, ValueError):
+        LOGGER.debug("Base GeoIP ou bibliothèque GeoIP indisponible pour %s", ip)
+    except Exception:
+        LOGGER.exception("Erreur GeoIP pour %s", ip)
+    GEOIP_CACHE[ip] = result
+    return result
+
+
+def collect_threats():
+    now = time.time()
+    threats = []
+    with WEB_STATS_LOCK:
+        event_snapshots = {ip: list(events) for ip, events in IP_EVENTS.items()}
+    for ip, events in event_snapshots.items():
+        recent = [event for event in events if event[0] >= now - IP_THREAT_WINDOW_SECONDS]
+        if not recent:
+            continue
+        reason = _threat_reason(recent, now)
+        if not reason:
+            continue
+        geo = _geoip(ip)
+        status_counts = {}
+        for _, status, _ in recent:
+            status_counts[str(status)] = status_counts.get(str(status), 0) + 1
+        threats.append({
+            "ip": ip,
+            "country": geo["country"],
+            "city": geo["city"],
+            "reason": reason,
+            "requests": len(recent),
+            "errors": sum(1 for _, status, _ in recent if 400 <= status < 500),
+            "status_counts": status_counts,
+            "paths": list(dict.fromkeys(path for _, _, path in recent))[-8:],
+            "last_seen": datetime.fromtimestamp(recent[-1][0]).astimezone().isoformat(timespec="seconds"),
+        })
+    return sorted(threats, key=lambda item: item["last_seen"], reverse=True)
+
+
 def collect_admin_stats():
     """Return process web counters and metadata extracted from stored request PDFs."""
     request_rows = []
@@ -499,6 +623,10 @@ def collect_admin_stats():
             "by_path": dict(WEB_STATS["by_path"]),
             "by_status": dict(WEB_STATS["by_status"]),
             "bytes_sent": WEB_STATS["bytes_sent"],
+            "by_path_status": {
+                path: dict(statuses)
+                for path, statuses in WEB_STATS["by_path_status"].items()
+            },
         }
     def count_by(field):
         values = {}
@@ -513,6 +641,7 @@ def collect_admin_stats():
         "server_started_at": datetime.fromtimestamp(SERVER_STARTED_AT).astimezone().isoformat(timespec="seconds"),
         "uptime_seconds": round(time.time() - SERVER_STARTED_AT),
         "web": web,
+        "threats": collect_threats(),
         "requests": {
             "count": len(request_rows),
             "total_bytes": sum(row["size_bytes"] for row in request_rows),
@@ -554,13 +683,29 @@ class SiteHandler(SimpleHTTPRequestHandler):
     def log_request(self, code="-", size="-"):
         path = urlparse(self.path).path[:160]
         status = str(code)
+        status_code = int(status) if status.isdigit() else 0
         sent = int(size) if str(size).isdigit() else 0
+        client_ip = self.client_ip()
         with WEB_STATS_LOCK:
             WEB_STATS["total_requests"] += 1
             WEB_STATS["bytes_sent"] += sent
             WEB_STATS["by_method"][self.command] = WEB_STATS["by_method"].get(self.command, 0) + 1
             WEB_STATS["by_path"][path] = WEB_STATS["by_path"].get(path, 0) + 1
             WEB_STATS["by_status"][status] = WEB_STATS["by_status"].get(status, 0) + 1
+            path_statuses = WEB_STATS["by_path_status"].setdefault(path, {})
+            path_statuses[status] = path_statuses.get(status, 0) + 1
+            threat_reason = _record_ip_event(client_ip, status_code, path)
+            if len(IP_EVENTS) > 2048:
+                oldest_ip = min(IP_EVENTS, key=lambda ip: IP_EVENTS[ip][-1][0] if IP_EVENTS[ip] else 0)
+                IP_EVENTS.pop(oldest_ip, None)
+        if threat_reason:
+            LOGGER.warning(
+                "Menace potentielle: ip=%s raison=%s chemin=%s statut=%s",
+                client_ip,
+                threat_reason,
+                path,
+                status,
+            )
         super().log_request(code, size)
 
     def _require_admin(self):

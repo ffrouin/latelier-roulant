@@ -73,11 +73,18 @@ par besoin/disponibilité/urgence, le tri de chaque colonne et la liste des docu
 Le port `587` est utilisé avec STARTTLS par défaut. Le port `465` est aussi
 possible avec `SMTP_SSL="1"`.
 
+La section **Menaces** suit les erreurs 4xx par adresse IP pendant la durée de
+vie du processus. Elle signale les sondes de chemins sensibles, trois erreurs
+4xx consécutives sur plusieurs chemins, ou un volume élevé d’erreurs 4xx en une
+minute. Les erreurs 5xx sont affichées dans le trafic mais ne sont pas
+considérées seules comme une attaque. La géolocalisation est facultative et
+utilise en priorité une base GeoIP2 `.mmdb`, puis accepte les anciennes bases GeoLite City `.dat` via `GEOIP_LEGACY_DB_PATH` (par exemple `/opt/GeoIPv2/GeoLiteCity.dat`) ; sans bibliothèque ou base compatible, le pays et la ville restent affichés comme non disponibles.
+
 La génération du PDF enrichi utilise Pillow et `qrencode` pour intégrer la
 photo envoyée et le QR code. Le compte du service doit pouvoir écrire dans
 `REQUEST_STORAGE_DIR`, qui contient les PDF accessibles par leur référence.
 Avec un service systemd utilisant `ProtectSystem=strict`, ajoutez également
-`ReadWritePaths=/var/lib/latelier-roulant/requests` dans la section
+`ReadWritePaths=/opt/latelier-roulant/requests` dans la section
 `[Service]`.
 
 ## Structure

@@ -6,7 +6,7 @@
   <link rel="icon" href="/favicon.ico" type="image/x-icon">
   <title>Administration · L’Atelier Roulant</title>
   <style>
-    :root { color-scheme: light; --ink:#18211f; --muted:#66716d; --accent:#ed6b3b; --line:#e7e2dc; --paper:#f8f6f2; --card:#fff; }
+    :root { color-scheme: light; --ink:#18211f; --muted:#66716d; --accent:#ed6b3b; --line:#e7e2dc; --paper:#f8f6f2; --card:#fff; --ok:#287a4b; --warn:#c87416; --bad:#b32f2f; }
     * { box-sizing:border-box; }
     body { margin:0; background:var(--paper); color:var(--ink); font-family:Inter,system-ui,-apple-system,sans-serif; }
     main { width:min(1280px,100%); margin:0 auto; padding:38px 24px 56px; }
@@ -31,6 +31,24 @@
     .bar-row { display:grid; grid-template-columns:minmax(110px,1fr) 2fr 35px; align-items:center; gap:10px; font-size:.86rem; }
     .bar { height:9px; background:#eeeae5; border-radius:99px; overflow:hidden; }
     .bar i { display:block; height:100%; background:var(--accent); border-radius:inherit; }
+    .path-list { display:grid; gap:8px; }
+    .path-row { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:10px; align-items:center; padding:7px 0; border-bottom:1px solid var(--line); font-size:.8rem; }
+    .path-name { overflow-wrap:anywhere; }
+    .path-name.status-ok { color:var(--ok); }
+    .path-name.status-warning { color:var(--warn); }
+    .path-name.status-error { color:var(--bad); }
+    .status-badges { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:4px; }
+    .status-badge { padding:3px 6px; border-radius:4px; font-size:.68rem; font-weight:700; }
+    .status-badge.status-ok { color:#185632; background:#e7f4eb; }
+    .status-badge.status-warning { color:#8b500b; background:#fff0d9; }
+    .status-badge.status-error { color:#8b201b; background:#fde8e5; }
+    .status-badge.status-neutral { color:var(--muted); background:#efeeeb; }
+    .threat-table th:nth-child(1), .threat-table td:nth-child(1) { width:14%; }
+    .threat-table th:nth-child(2), .threat-table td:nth-child(2) { width:13%; }
+    .threat-table th:nth-child(3), .threat-table td:nth-child(3) { width:13%; }
+    .threat-table th:nth-child(4), .threat-table td:nth-child(4) { width:24%; }
+    .threat-table th:nth-child(5), .threat-table td:nth-child(5) { width:10%; }
+    .threat-table th:nth-child(6), .threat-table td:nth-child(6) { width:26%; }
     .table-wrap { overflow:auto; }
     table { width:100%; table-layout:fixed; border-collapse:collapse; font-size:.76rem; }
     th,td { text-align:left; padding:8px 5px; border-bottom:1px solid var(--line); white-space:normal; overflow-wrap:anywhere; vertical-align:top; }
@@ -75,6 +93,7 @@
     <section><h2>Disponibilités</h2><div class="bars" id="availability"></div></section>
     <section><h2>Trafic web</h2><div class="metric-label">Codes HTTP</div><div class="bars" id="web-status"></div><div class="metric-label" style="margin-top:18px">Chemins consultés</div><div class="bars" id="web-paths"></div></section>
   </div>
+  <section><h2>Menaces</h2><p>Détection locale sur les requêtes du processus depuis son démarrage. Les erreurs serveur 5xx sont affichées mais ne sont pas considérées seules comme une menace.</p><div class="table-wrap"><table class="threat-table"><thead><tr><th>IP</th><th>Pays</th><th>Ville</th><th>Raison</th><th>Requêtes</th><th>Chemins observés</th></tr></thead><tbody id="threats"></tbody></table></div></section>
   <section><h2>PDF analysés dans le dossier de demandes</h2><div class="table-wrap"><table><thead><tr><th><button data-sort="reference">Référence ↕</button></th><th><button data-sort="date">Date ↕</button></th><th><button data-sort="postcode">CODE POSTAL ↕</button></th><th><button data-sort="town">COMMUNE ↕</button></th><th><button data-sort="service">Besoin ↕</button></th><th><button data-sort="availability">Disponibilité ↕</button></th><th><button data-sort="urgency">Urgence ↕</button></th><th><button data-sort="size_bytes">Taille ↕</button></th><th class="actions">Actions</th></tr></thead><tbody id="requests"></tbody></table></div></section>
 </main>
 <script>
@@ -106,6 +125,20 @@
     if (!response.ok) { document.getElementById('error').innerHTML=`<div class="error">Suppression impossible : ${esc(payload.error || `Erreur HTTP ${response.status}`)}</div>`; return; }
     await load();
   }
+  const statusClass = status => /^2\d\d$/.test(status) ? 'status-ok' : /^4\d\d$/.test(status) ? 'status-warning' : /^5\d\d$/.test(status) ? 'status-error' : 'status-neutral';
+  function renderPaths(pathStatuses) {
+    const entries = Object.entries(pathStatuses || {}).map(([path, statuses]) => {
+      const ordered = Object.entries(statuses).sort((a,b) => b[1] - a[1]);
+      const total = ordered.reduce((sum, [,value]) => sum + value, 0);
+      return {path, statuses:ordered, total, dominant:ordered[0]?.[0] || ''};
+    }).sort((a,b) => b.total - a.total);
+    document.getElementById('web-paths').className = 'path-list';
+    document.getElementById('web-paths').innerHTML = entries.length ? entries.map(item => `<div class="path-row"><span class="path-name ${statusClass(item.dominant)}">${esc(item.path)}</span><span class="status-badges">${item.statuses.map(([status,count]) => `<span class="status-badge ${statusClass(status)}">${esc(status)} · ${number.format(count)}</span>`).join('')}</span></div>`).join('') : '<div class="empty">Aucune donnée</div>';
+  }
+  function renderThreats(threats) {
+    const target = document.getElementById('threats');
+    target.innerHTML = threats?.length ? threats.map(item => `<tr><td>${esc(item.ip)}</td><td>${esc(item.country)}</td><td>${esc(item.city)}</td><td>${esc(item.reason)}</td><td>${number.format(item.requests)}<br><small>${number.format(item.errors)} erreur(s)</small></td><td>${(item.paths || []).map(path => esc(path)).join('<br>')}</td></tr>`).join('') : '<tr><td colspan="6" class="empty">Aucune menace détectée.</td></tr>';
+  }
   function render(data) {
     const r=data.requests, w=data.web;
     document.getElementById('request-count').textContent=number.format(r.count);
@@ -115,7 +148,7 @@
     document.getElementById('updated').textContent=`Mis à jour ${new Date(data.generated_at).toLocaleString('fr-FR')}`;
     document.getElementById('commit').textContent=`Commit chargé : ${data.commit || 'inconnu'}`;
     bars('services',r.by_service); bars('urgencies',r.by_urgency); bars('availability',r.by_availability);
-    bars('web-status',w.by_status); bars('web-paths',w.by_path);
+    bars('web-status',w.by_status); renderPaths(w.by_path_status); renderThreats(data.threats);
     requestItems = r.items || [];
     renderRequests();
   }
