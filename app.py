@@ -5,6 +5,7 @@ from datetime import datetime
 import hmac
 import io
 import json
+import logging
 import re
 import shutil
 import smtplib
@@ -20,6 +21,13 @@ from os import environ
 from pathlib import Path
 from urllib.parse import urlparse
 
+LOG_LEVEL = environ.get("LOG_LEVEL", "INFO").upper()
+logging.basicConfig(
+    level=getattr(logging, LOG_LEVEL, logging.INFO),
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+)
+LOGGER = logging.getLogger("latelier-roulant")
+
 ROOT = Path(__file__).resolve().parent
 PORT = int(environ.get("PORT", "8000"))
 OWNER_EMAIL = environ.get("OWNER_EMAIL", "freddy@linuxtribe.fr")
@@ -32,10 +40,13 @@ ADMIN_USERNAME = environ.get("ADMIN_USERNAME", "admin")
 ADMIN_PASSWORD = environ.get("ADMIN_PASSWORD", "")
 def get_commit_reference():
     git_dir = ROOT / ".git"
+    LOGGER.info("Recherche du commit: root=%s git=%s existe=%s", ROOT, git_dir, git_dir.exists())
     if git_dir.is_file():
         try:
             git_dir = (ROOT / git_dir.read_text(encoding="utf-8").strip().split(" ", 1)[1]).resolve()
-        except (OSError, IndexError):
+            LOGGER.info("Dépôt Git de worktree détecté: %s", git_dir)
+        except (OSError, IndexError, UnicodeError):
+            LOGGER.exception("Impossible de lire le fichier .git")
             return "inconnu"
     try:
         commit = subprocess.run(
@@ -45,27 +56,38 @@ def get_commit_reference():
             text=True,
             timeout=2,
         ).stdout.strip()
-        return commit
-    except (OSError, subprocess.SubprocessError):
-        try:
-            head = (git_dir / "HEAD").read_text(encoding="utf-8").strip()
-            if head.startswith("ref: "):
-                ref = head[6:]
-                ref_path = git_dir / ref
-                if ref_path.is_file():
-                    return ref_path.read_text(encoding="ascii").strip()[:12]
-                packed_refs = git_dir / "packed-refs"
-                if packed_refs.is_file():
-                    for line in packed_refs.read_text(encoding="ascii").splitlines():
-                        if line and not line.startswith("#") and not line.startswith("^"):
-                            commit_hash, packed_ref = line.split(" ", 1)
-                            if packed_ref == ref:
-                                return commit_hash[:12]
-            if re.fullmatch(r"[0-9a-f]{7,40}", head):
-                return head[:12]
-        except (OSError, UnicodeError, ValueError):
-            pass
-        return "inconnu"
+        if re.fullmatch(r"[0-9a-f]{7,40}", commit):
+            LOGGER.info("Commit récupéré avec git: %s", commit)
+            return commit
+        LOGGER.warning("git a retourné une référence invalide: %r", commit)
+    except (OSError, subprocess.SubprocessError) as error:
+        LOGGER.warning("Impossible d'exécuter git: %s", error)
+    try:
+        head = (git_dir / "HEAD").read_text(encoding="utf-8").strip()
+        LOGGER.info("Lecture directe de .git/HEAD: %r", head)
+        if head.startswith("ref: "):
+            ref = head[6:]
+            ref_path = git_dir / ref
+            if ref_path.is_file():
+                commit = ref_path.read_text(encoding="ascii").strip()
+                if re.fullmatch(r"[0-9a-f]{7,40}", commit):
+                    LOGGER.info("Commit récupéré depuis %s: %s", ref_path, commit[:12])
+                    return commit[:12]
+            packed_refs = git_dir / "packed-refs"
+            if packed_refs.is_file():
+                for line in packed_refs.read_text(encoding="ascii").splitlines():
+                    if line and not line.startswith("#") and not line.startswith("^"):
+                        commit_hash, packed_ref = line.split(" ", 1)
+                        if packed_ref == ref and re.fullmatch(r"[0-9a-f]{7,40}", commit_hash):
+                            LOGGER.info("Commit récupéré depuis packed-refs: %s", commit_hash[:12])
+                            return commit_hash[:12]
+        if re.fullmatch(r"[0-9a-f]{7,40}", head):
+            LOGGER.info("Commit détaché récupéré depuis HEAD: %s", head[:12])
+            return head[:12]
+    except (OSError, UnicodeError, ValueError) as error:
+        LOGGER.warning("Impossible de lire directement les métadonnées Git: %s", error)
+    LOGGER.error("Référence de commit inconnue: dépôt Git absent ou inaccessible")
+    return "inconnu"
 
 
 APP_COMMIT = get_commit_reference()
