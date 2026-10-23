@@ -38,15 +38,16 @@ Configurez
 les variables SMTP avant de lancer le serveur :
 
 ```bash
-export OWNER_EMAIL="freddy@linuxtribe.fr"
-export SMTP_HOST="cgpro.linuxtribe.fr"
+export OWNER_EMAIL="me@my.mail"
+export SMTP_HOST="smtp.my.mail"
 export SMTP_PORT="587"
-export SMTP_USERNAME="freddy@linuxtribe.fr"
+export SMTP_USERNAME="me@my.mail"
 export SMTP_PASSWORD="mot-de-passe-fourni-par-le-fournisseur"
-export SMTP_FROM="freddy@linuxtribe.fr"
+export SMTP_FROM="me@my.mail"
 export SMTP_STARTTLS="1"
 export PUBLIC_BASE_URL="https://atelier-roulant.linuxtribe.fr"
-export REQUEST_STORAGE_DIR="/var/lib/latelier-roulant/requests"
+export REQUEST_STORAGE_DIR="/opt/latelier-roulant/requests"
+export GEOIP_LEGACY_DB_PATH="/opt/GeoIPv2/GeoLiteCity.dat"
 export ADMIN_USERNAME="admin"
 export ADMIN_PASSWORD="mot-de-passe-admin-fort-et-hors-du-depot"
 python3 app.py

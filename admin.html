@@ -22,6 +22,11 @@
     .header-status strong { color:var(--ink); font-weight:500; }
     .commit-ref { min-width:150px; padding:9px 12px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--ink); font-size:.78rem; font-family:ui-monospace,SFMono-Regular,monospace; }
     .commit-ref code { font:inherit; }
+    .admin-tabs { display:flex; gap:4px; margin:0 0 22px; padding:4px; border:1px solid var(--line); border-radius:7px; background:#efede8; }
+    .admin-tab { flex:0 0 auto; border:0; border-radius:5px; padding:10px 16px; color:var(--muted); background:transparent; font:600 .8rem Inter,system-ui,sans-serif; cursor:pointer; }
+    .admin-tab:hover { color:var(--ink); background:#fff; }
+    .admin-tab[aria-selected="true"] { color:#fff; background:var(--ink); }
+    .tab-panel[hidden] { display:none; }
     .cards { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:26px; }
     .card, section { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:20px; }
     .metric { font-size:2rem; font-weight:700; letter-spacing:-.05em; }
@@ -81,26 +86,42 @@
     <div class="header-tools"><button id="refresh">Actualiser</button><div class="header-status"><span>Dernière mise à jour</span><strong id="updated">Chargement…</strong></div><div class="commit-ref"><span>Version chargée</span><code id="commit">—</code></div></div>
   </header>
   <div id="error"></div>
-  <div class="cards">
-    <div class="card"><div class="metric" id="request-count">—</div><div class="metric-label">PDF de demandes</div></div>
-    <div class="card"><div class="metric" id="web-count">—</div><div class="metric-label">requêtes web depuis le démarrage</div></div>
-    <div class="card"><div class="metric" id="uptime">—</div><div class="metric-label">durée du processus</div></div>
-    <div class="card"><div class="metric" id="storage">—</div><div class="metric-label">stockage PDF</div></div>
+  <nav class="admin-tabs" role="tablist" aria-label="Sections d’administration">
+    <button class="admin-tab" id="tab-button-dashboard" type="button" role="tab" aria-selected="true" aria-controls="tab-dashboard" data-tab="tab-dashboard">Tableau de bord</button>
+    <button class="admin-tab" id="tab-button-requests" type="button" role="tab" aria-selected="false" aria-controls="tab-requests" data-tab="tab-requests">Demandes clients</button>
+  </nav>
+  <div id="tab-dashboard" class="tab-panel" role="tabpanel" aria-labelledby="tab-button-dashboard">
+    <div class="cards">
+      <div class="card"><div class="metric" id="request-count">—</div><div class="metric-label">PDF de demandes</div></div>
+      <div class="card"><div class="metric" id="web-count">—</div><div class="metric-label">requêtes web depuis le démarrage</div></div>
+      <div class="card"><div class="metric" id="uptime">—</div><div class="metric-label">durée du processus</div></div>
+      <div class="card"><div class="metric" id="storage">—</div><div class="metric-label">stockage PDF</div></div>
+    </div>
+    <div class="grid">
+      <section><h2>Demandes par besoin</h2><div class="bars" id="services"></div></section>
+      <section><h2>Demandes par urgence</h2><div class="bars" id="urgencies"></div></section>
+      <section><h2>Disponibilités</h2><div class="bars" id="availability"></div></section>
+      <section><h2>Trafic web</h2><div class="metric-label">Codes HTTP</div><div class="bars" id="web-status"></div><div class="metric-label" style="margin-top:18px">Chemins consultés</div><div class="bars" id="web-paths"></div></section>
+    </div>
+    <section><h2>Menaces</h2><p>Détection locale sur les requêtes du processus depuis son démarrage. Les erreurs serveur 5xx sont affichées mais ne sont pas considérées seules comme une menace.</p><div class="table-wrap"><table class="threat-table"><thead><tr><th>IP</th><th>Pays</th><th>Ville</th><th>Raison</th><th>Requêtes</th><th>Chemins observés</th></tr></thead><tbody id="threats"></tbody></table></div></section>
   </div>
-  <div class="grid">
-    <section><h2>Demandes par besoin</h2><div class="bars" id="services"></div></section>
-    <section><h2>Demandes par urgence</h2><div class="bars" id="urgencies"></div></section>
-    <section><h2>Disponibilités</h2><div class="bars" id="availability"></div></section>
-    <section><h2>Trafic web</h2><div class="metric-label">Codes HTTP</div><div class="bars" id="web-status"></div><div class="metric-label" style="margin-top:18px">Chemins consultés</div><div class="bars" id="web-paths"></div></section>
+  <div id="tab-requests" class="tab-panel" role="tabpanel" aria-labelledby="tab-button-requests" hidden>
+    <section><h2>PDF analysés dans le dossier de demandes</h2><div class="table-wrap"><table><thead><tr><th><button data-sort="reference">Référence ↕</button></th><th><button data-sort="date">Date ↕</button></th><th><button data-sort="postcode">CODE POSTAL ↕</button></th><th><button data-sort="town">COMMUNE ↕</button></th><th><button data-sort="service">Besoin ↕</button></th><th><button data-sort="availability">Disponibilité ↕</button></th><th><button data-sort="urgency">Urgence ↕</button></th><th><button data-sort="size_bytes">Taille ↕</button></th><th class="actions">Actions</th></tr></thead><tbody id="requests"></tbody></table></div></section>
   </div>
-  <section><h2>Menaces</h2><p>Détection locale sur les requêtes du processus depuis son démarrage. Les erreurs serveur 5xx sont affichées mais ne sont pas considérées seules comme une menace.</p><div class="table-wrap"><table class="threat-table"><thead><tr><th>IP</th><th>Pays</th><th>Ville</th><th>Raison</th><th>Requêtes</th><th>Chemins observés</th></tr></thead><tbody id="threats"></tbody></table></div></section>
-  <section><h2>PDF analysés dans le dossier de demandes</h2><div class="table-wrap"><table><thead><tr><th><button data-sort="reference">Référence ↕</button></th><th><button data-sort="date">Date ↕</button></th><th><button data-sort="postcode">CODE POSTAL ↕</button></th><th><button data-sort="town">COMMUNE ↕</button></th><th><button data-sort="service">Besoin ↕</button></th><th><button data-sort="availability">Disponibilité ↕</button></th><th><button data-sort="urgency">Urgence ↕</button></th><th><button data-sort="size_bytes">Taille ↕</button></th><th class="actions">Actions</th></tr></thead><tbody id="requests"></tbody></table></div></section>
 </main>
 <script>
   const number = new Intl.NumberFormat('fr-FR');
   let requestItems = [];
   let sortKey = 'date';
   let sortDirection = -1;
+  function activateTab(tabId) {
+    document.querySelectorAll('.admin-tab').forEach(button => {
+      const selected = button.dataset.tab === tabId;
+      button.setAttribute('aria-selected', String(selected));
+    });
+    document.querySelectorAll('.tab-panel').forEach(panel => { panel.hidden = panel.id !== tabId; });
+  }
+  document.querySelectorAll('.admin-tab').forEach(button => button.addEventListener('click', () => activateTab(button.dataset.tab)));
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const fmtBytes = bytes => bytes < 1024 ? `${bytes} o` : bytes < 1048576 ? `${(bytes/1024).toFixed(1)} Ko` : `${(bytes/1048576).toFixed(2)} Mo`;
   const fmtDuration = seconds => { const d=Math.floor(seconds/86400), h=Math.floor(seconds%86400/3600), m=Math.floor(seconds%3600/60); return d ? `${d}j ${h}h` : h ? `${h}h ${m}m` : `${m}m`; };

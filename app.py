@@ -35,8 +35,8 @@ LOGGER = logging.getLogger("latelier-roulant")
 APP_HOME = environ.get("APP_HOME")
 ROOT = (Path(APP_HOME).expanduser() if APP_HOME else Path(__file__).resolve().parent)
 PORT = int(environ.get("PORT", "8000"))
-OWNER_EMAIL = environ.get("OWNER_EMAIL", "freddy@linuxtribe.fr")
-SMTP_HOST = environ.get("SMTP_HOST", "cgpro.linuxtribe.fr")
+OWNER_EMAIL = environ.get("OWNER_EMAIL", "me@my.mail")
+SMTP_HOST = environ.get("SMTP_HOST", "smtp.my.mail")
 SMTP_USERNAME = environ.get("SMTP_USERNAME", OWNER_EMAIL)
 PUBLIC_BASE_URL = environ.get("PUBLIC_BASE_URL", "https://atelier-roulant.linuxtribe.fr").rstrip("/")
 DEFAULT_REQUEST_STORAGE_DIR = ROOT / "requests" if (ROOT / "requests").is_dir() else ROOT / "data" / "requests"
@@ -232,8 +232,8 @@ def make_pdf(data, document_url):
         circle(408, 829, 1.5) + " f", circle(415, 826, 1.5) + " f", circle(422, 829, 1.5) + " f",
         "BT", "/F1 24 Tf", fill(ink), "55 810 Td", pdf_text("L'ATELIER ROULANT"), "ET",
         "BT", "/F1 10 Tf", fill(orange), "55 790 Td", pdf_text("Réparer plutôt que remplacer"), "ET",
-        "BT", "/F1 10 Tf", fill(ink), "455 815 Td", pdf_text("Freddy Frouin"), "ET",
-        "BT", "/F1 9 Tf", fill(orange), "455 798 Td", pdf_text("06 63 22 22 80"), "ET",
+        "BT", "/F1 10 Tf", fill(ink), "455 815 Td", pdf_text("L'Atelier Roulant"), "ET",
+        "BT", "/F1 9 Tf", fill(orange), "455 798 Td", pdf_text("me@my.mail"), "ET",
         "Q",
     ]
 
@@ -309,7 +309,7 @@ def make_pdf(data, document_url):
     ]
     for index, line in enumerate(wrap_lines(document_url, 58)[:3]):
         commands += ["BT", "/F1 8 Tf", fill(muted), f"55 {108 - index * 11} Td", pdf_text(line), "ET"]
-    legal_text = "L'Atelier Roulant - Freddy Frouin - 0663222280 - 514914712 RCS Niort - freddy@linuxtribe.fr"
+    legal_text = "L'Atelier Roulant - me@my.mail"
     legal_x = (595 - len(legal_text) * 7 * 0.48) / 2
     commands += [
         "BT", "/F1 9 Tf", fill(muted), "55 42 Td", pdf_text(f"Référence : {data['request_id']}"), "ET",
