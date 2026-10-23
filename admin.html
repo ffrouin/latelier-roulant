@@ -223,7 +223,7 @@
     const target = document.getElementById('threats');
     target.innerHTML = threats?.length ? threats.map(item => `<tr><td>${whoisLink(item.ip)}</td><td>${esc(item.country)}</td><td>${esc(item.city)}</td><td>${esc(item.reason)}</td><td>${number.format(item.requests)}<br><small>${number.format(item.errors)} erreur(s)</small></td><td>${(item.paths || []).map(path => esc(path)).join('<br>')}</td></tr>`).join('') : '<tr><td colspan="6" class="empty">Aucune menace détectée.</td></tr>';
   }
-  const whoisLink = ip => `<a class="ip-whois" href="https://who.is/whois-ip/${encodeURIComponent(ip)}" target="_blank" rel="noopener noreferrer" title="Voir les données WHOIS de ${esc(ip)}">${esc(ip)}</a>`;
+  const whoisLink = ip => `<a class="ip-whois" href="https://whatismyipaddress.com/ip/${encodeURIComponent(ip)}" target="_blank" rel="noopener noreferrer" title="Voir les données WHOIS de ${esc(ip)}">${esc(ip)}</a>`;
   function renderVisitors(visitors) {
     const target = document.getElementById('web-visitors');
     target.innerHTML = visitors?.length ? visitors.map(item => `<tr><td>${whoisLink(item.ip)}</td><td>${esc(item.country)}</td><td>${esc(item.city)}</td><td>${number.format(item.requests)}</td><td>${esc(item.last_seen)}</td></tr>`).join('') : '<tr><td colspan="5" class="empty">Aucun visiteur enregistré.</td></tr>';
