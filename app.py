@@ -3,6 +3,7 @@
 import base64
 from datetime import datetime
 import hmac
+import ipaddress
 import io
 import json
 import logging
@@ -533,6 +534,22 @@ class SiteHandler(SimpleHTTPRequestHandler):
     def end_headers(self):
         self.send_header("Cache-Control", "no-cache")
         super().end_headers()
+
+    def client_ip(self):
+        """Return the public client IP forwarded by the trusted local proxy."""
+        peer_ip = self.client_address[0]
+        if peer_ip in {"127.0.0.1", "::1"}:
+            forwarded = self.headers.get("X-Forwarded-For", "")
+            candidate = forwarded.split(",", 1)[0].strip() if forwarded else self.headers.get("X-Real-IP", "").strip()
+            try:
+                ipaddress.ip_address(candidate)
+                return candidate
+            except ValueError:
+                pass
+        return peer_ip
+
+    def address_string(self):
+        return self.client_ip()
 
     def log_request(self, code="-", size="-"):
         path = urlparse(self.path).path[:160]
