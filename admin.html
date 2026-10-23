@@ -48,6 +48,18 @@
     .status-badge.status-warning { color:#8b500b; background:#fff0d9; }
     .status-badge.status-error { color:#8b201b; background:#fde8e5; }
     .status-badge.status-neutral { color:var(--muted); background:#efeeeb; }
+    .request-status { display:inline-block; padding:4px 7px; border-radius:4px; font-size:.7rem; font-weight:700; white-space:nowrap; }
+    .request-status.status-todo { color:#8b500b; background:#fff0d9; }
+    .request-status.status-planned { color:#255b8a; background:#e6f1fb; }
+    .request-status.status-done { color:#185632; background:#e7f4eb; }
+    .request-status.status-abandoned { color:#8b201b; background:#fde8e5; }
+    dialog { width:min(520px,calc(100% - 28px)); border:1px solid var(--line); border-radius:8px; padding:22px; color:var(--ink); background:var(--card); box-shadow:0 18px 60px rgba(24,33,31,.24); }
+    dialog::backdrop { background:rgba(24,33,31,.35); }
+    .dialog-form { display:grid; gap:14px; }
+    .dialog-form label { display:grid; gap:6px; color:var(--muted); font-size:.78rem; font-weight:600; }
+    .dialog-form select, .dialog-form textarea { width:100%; border:1px solid var(--line); border-radius:5px; padding:10px; color:var(--ink); background:#fff; font:400 .9rem Inter,system-ui,sans-serif; }
+    .dialog-actions { display:flex; justify-content:flex-end; gap:8px; }
+    .dialog-cancel { color:var(--ink); background:var(--paper); }
     .threat-table th:nth-child(1), .threat-table td:nth-child(1) { width:14%; }
     .threat-table th:nth-child(2), .threat-table td:nth-child(2) { width:13%; }
     .threat-table th:nth-child(3), .threat-table td:nth-child(3) { width:13%; }
@@ -106,14 +118,26 @@
     <section><h2>Menaces</h2><p>Détection locale sur les requêtes du processus depuis son démarrage. Les erreurs serveur 5xx sont affichées mais ne sont pas considérées seules comme une menace.</p><div class="table-wrap"><table class="threat-table"><thead><tr><th>IP</th><th>Pays</th><th>Ville</th><th>Raison</th><th>Requêtes</th><th>Chemins observés</th></tr></thead><tbody id="threats"></tbody></table></div></section>
   </div>
   <div id="tab-requests" class="tab-panel" role="tabpanel" aria-labelledby="tab-button-requests" hidden>
-    <section><h2>PDF analysés dans le dossier de demandes</h2><div class="table-wrap"><table><thead><tr><th><button data-sort="reference">Référence ↕</button></th><th><button data-sort="date">Date ↕</button></th><th><button data-sort="postcode">CODE POSTAL ↕</button></th><th><button data-sort="town">COMMUNE ↕</button></th><th><button data-sort="service">Besoin ↕</button></th><th><button data-sort="availability">Disponibilité ↕</button></th><th><button data-sort="urgency">Urgence ↕</button></th><th><button data-sort="size_bytes">Taille ↕</button></th><th class="actions">Actions</th></tr></thead><tbody id="requests"></tbody></table></div></section>
+    <section><h2>PDF analysés dans le dossier de demandes</h2><div class="table-wrap"><table><thead><tr><th><button data-sort="reference">Référence ↕</button></th><th><button data-sort="date">Date ↕</button></th><th><button data-sort="postcode">CODE POSTAL ↕</button></th><th><button data-sort="town">COMMUNE ↕</button></th><th><button data-sort="service">Besoin ↕</button></th><th><button data-sort="availability">Disponibilité ↕</button></th><th><button data-sort="urgency">Urgence ↕</button></th><th><button data-sort="status">Statut ↕</button></th><th><button data-sort="size_bytes">Taille ↕</button></th><th class="actions">Actions</th></tr></thead><tbody id="requests"></tbody></table></div></section>
   </div>
+  <dialog id="followup-dialog" aria-labelledby="followup-title">
+    <form class="dialog-form" id="followup-form" method="dialog">
+      <h2 id="followup-title">Suivi de la demande</h2>
+      <p id="followup-reference"></p>
+      <label>Statut<select id="followup-status"><option>A traiter</option><option>Planifié</option><option>Traité</option><option>Abandon</option></select></label>
+      <label>Observation<textarea id="followup-observation" rows="6" maxlength="2000" placeholder="Ajoutez une observation dans le journal PDF…"></textarea></label>
+      <div class="dialog-actions"><button class="dialog-cancel" id="followup-cancel" type="button">Annuler</button><button id="followup-save" type="submit">Enregistrer dans le PDF</button></div>
+    </form>
+  </dialog>
 </main>
 <script>
   const number = new Intl.NumberFormat('fr-FR');
   let requestItems = [];
   let sortKey = 'date';
   let sortDirection = -1;
+  const followupDialog = document.getElementById('followup-dialog');
+  const followupForm = document.getElementById('followup-form');
+  let followupReference = '';
   function activateTab(tabId) {
     document.querySelectorAll('.admin-tab').forEach(button => {
       const selected = button.dataset.tab === tabId;
@@ -135,9 +159,36 @@
       const result = typeof left === 'number' && typeof right === 'number' ? left - right : String(left).localeCompare(String(right), 'fr', {numeric:true, sensitivity:'base'});
       return result * sortDirection;
     });
-    document.getElementById('requests').innerHTML = rows.length ? rows.map(item => `<tr><td>${esc(item.reference)}</td><td>${esc(item.date||item.modified_at)}</td><td>${esc(item.postcode)}</td><td>${esc(item.town)}</td><td>${esc(item.service)}</td><td>${esc(item.availability)}</td><td>${esc(item.urgency)}</td><td>${fmtBytes(item.size_bytes)}</td><td class="actions"><a class="table-action" href="/requests/${encodeURIComponent(item.reference)}.pdf" target="_blank" rel="noopener" aria-label="Ouvrir le PDF ${esc(item.reference)}" title="Ouvrir le PDF"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3h7v7M21 3l-9 9"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg></a><button type="button" class="table-action delete-action" data-delete="${esc(item.reference)}" aria-label="Supprimer le PDF ${esc(item.reference)}" title="Supprimer le PDF"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></button></td></tr>`).join('') : '<tr><td colspan="9" class="empty">Aucun PDF trouvé.</td></tr>';
+    document.getElementById('requests').innerHTML = rows.length ? rows.map(item => `<tr><td>${esc(item.reference)}</td><td>${esc(item.date||item.modified_at)}</td><td>${esc(item.postcode)}</td><td>${esc(item.town)}</td><td>${esc(item.service)}</td><td>${esc(item.availability)}</td><td>${esc(item.urgency)}</td><td><span class="request-status ${requestStatusClass(item.status)}">${esc(item.status || 'A traiter')}</span></td><td>${fmtBytes(item.size_bytes)}</td><td class="actions"><button type="button" class="table-action" data-followup="${esc(item.reference)}" aria-label="Modifier le suivi ${esc(item.reference)}" title="Modifier le suivi">✎</button><a class="table-action" href="/requests/${encodeURIComponent(item.reference)}.pdf" target="_blank" rel="noopener" aria-label="Ouvrir le PDF ${esc(item.reference)}" title="Ouvrir le PDF"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3h7v7M21 3l-9 9"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg></a><button type="button" class="table-action delete-action" data-delete="${esc(item.reference)}" aria-label="Supprimer le PDF ${esc(item.reference)}" title="Supprimer le PDF"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></button></td></tr>`).join('') : '<tr><td colspan="10" class="empty">Aucun PDF trouvé.</td></tr>';
     document.querySelectorAll('[data-delete]').forEach(button => button.addEventListener('click', deleteRequest));
+    document.querySelectorAll('[data-followup]').forEach(button => button.addEventListener('click', openFollowup));
   }
+  const requestStatusClass = status => ({'A traiter':'status-todo','Planifié':'status-planned','Traité':'status-done','Abandon':'status-abandoned'}[status] || 'status-todo');
+  function openFollowup(event) {
+    followupReference = event.currentTarget.dataset.followup;
+    const item = requestItems.find(row => row.reference === followupReference) || {};
+    document.getElementById('followup-reference').textContent = `Référence : ${followupReference}`;
+    document.getElementById('followup-status').value = item.status || 'A traiter';
+    document.getElementById('followup-observation').value = '';
+    followupDialog.showModal();
+  }
+  document.getElementById('followup-cancel').addEventListener('click', () => followupDialog.close());
+  followupForm.addEventListener('submit', async event => {
+    event.preventDefault();
+    const save = document.getElementById('followup-save');
+    save.disabled = true;
+    try {
+      const response = await fetch('/api/admin/update-request', {method:'POST', headers:{'Content-Type':'application/json','X-Admin-Action':'update-request'}, body:JSON.stringify({reference:followupReference, status:document.getElementById('followup-status').value, observation:document.getElementById('followup-observation').value})});
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || `Erreur HTTP ${response.status}`);
+      followupDialog.close();
+      await load();
+    } catch (error) {
+      document.getElementById('error').innerHTML = `<div class="error">Mise à jour impossible : ${esc(error.message)}</div>`;
+    } finally {
+      save.disabled = false;
+    }
+  });
   async function deleteRequest(event) {
     const reference = event.currentTarget.dataset.delete;
     if (!confirm(`Supprimer définitivement le PDF ${reference} ?`)) return;

@@ -74,7 +74,7 @@ La page `/admin` est protégée par une authentification HTTP Basic. Elle est
 désactivée si `ADMIN_PASSWORD` n’est pas défini. Elle affiche les compteurs web
 depuis le démarrage du processus et analyse les PDF présents dans
 `REQUEST_STORAGE_DIR` pour présenter le nombre de demandes, les répartitions
-par besoin/disponibilité/urgence, le tri de chaque colonne et la liste des documents. Chaque ligne permet d’ouvrir le PDF ou de le supprimer après confirmation. La suppression est protégée par l’authentification administrateur et agit uniquement sur le fichier PDF runtime. Le mot de passe administrateur doit rester dans l’environnement systemd ou nginx, jamais dans Git. Les compteurs web sont remis à zéro lors d’un redémarrage du service. La référence du commit est récupérée automatiquement par `app.py` depuis le dépôt Git local, y compris sans exécuter la commande `git` lorsque les métadonnées `.git` sont accessibles.
+par besoin/disponibilité/urgence/statut, le tri de chaque colonne et la liste des documents. Chaque ligne permet d’ouvrir le PDF, de modifier son suivi ou de le supprimer après confirmation. Une modification de statut ou une observation est ajoutée comme nouvelle page dans le PDF lui-même ; aucun fichier de métadonnées séparé n’est créé. Les nouvelles références PDF utilisent 32 caractères hexadécimaux aléatoires (les anciennes références de 12 caractères restent lisibles). La suppression et la mise à jour sont protégées par l’authentification administrateur et agissent uniquement sur le fichier PDF runtime. Le mot de passe administrateur doit rester dans l’environnement systemd ou nginx, jamais dans Git. Les compteurs web sont remis à zéro lors d’un redémarrage du service. La référence du commit est récupérée automatiquement par `app.py` depuis le dépôt Git local, y compris sans exécuter la commande `git` lorsque les métadonnées `.git` sont accessibles.
 
 Le port `587` est utilisé avec STARTTLS par défaut. Le port `465` est aussi
 possible avec `SMTP_SSL="1"`.
@@ -87,7 +87,9 @@ considérées seules comme une attaque. La géolocalisation est facultative et
 utilise en priorité une base GeoIP2 `.mmdb`, puis accepte les anciennes bases GeoLite City `.dat` via `GEOIP_LEGACY_DB_PATH` (par exemple `/opt/GeoIPv2/GeoLiteCity.dat`) ; sans bibliothèque ou base compatible, le pays et la ville restent affichés comme non disponibles.
 
 La génération du PDF enrichi utilise Pillow et `qrencode` pour intégrer la
-photo envoyée et le QR code. Le compte du service doit pouvoir écrire dans
+photo envoyée et le QR code. Le suivi PDF utilise également `pdfunite`
+(paquet `poppler-utils`) afin d’ajouter chaque entrée au document existant.
+Le compte du service doit pouvoir écrire dans
 `REQUEST_STORAGE_DIR`, qui contient les PDF accessibles par leur référence.
 Avec un service systemd utilisant `ProtectSystem=strict`, ajoutez également
 `ReadWritePaths=/opt/latelier-roulant/requests` dans la section

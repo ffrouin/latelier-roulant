@@ -17,6 +17,7 @@ import subprocess
 import textwrap
 import threading
 import time
+import tempfile
 import uuid
 import zlib
 from email.message import EmailMessage
@@ -46,6 +47,8 @@ LEGAL_REGISTRATION = environ.get("LEGAL_REGISTRATION", "")
 LEGAL_EMAIL = environ.get("LEGAL_EMAIL", OWNER_EMAIL)
 DEFAULT_REQUEST_STORAGE_DIR = ROOT / "requests" if (ROOT / "requests").is_dir() else ROOT / "data" / "requests"
 REQUEST_STORAGE_DIR = Path(environ.get("REQUEST_STORAGE_DIR", str(DEFAULT_REQUEST_STORAGE_DIR)))
+REQUEST_REFERENCE_RE = re.compile(r"^(?:[A-F0-9]{12}|[A-F0-9]{32})$")
+REQUEST_STATUSES = ("A traiter", "Planifié", "Traité", "Abandon")
 ADMIN_USERNAME = environ.get("ADMIN_USERNAME", "admin")
 ADMIN_PASSWORD = environ.get("ADMIN_PASSWORD", "")
 GEOIP_DB_PATH = environ.get("GEOIP_DB_PATH", "/usr/share/GeoIP/GeoLite2-City.mmdb")
@@ -189,6 +192,23 @@ def wrap_lines(value, width):
     return textwrap.wrap(str(value or "Non précisé"), width=width) or ["Non précisé"]
 
 
+def serialize_pdf_objects(objects):
+    pdf = bytearray(b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n")
+    offsets = [0]
+    for number, obj in enumerate(objects, start=1):
+        offsets.append(len(pdf))
+        pdf.extend(f"{number} 0 obj\n".encode("ascii"))
+        pdf.extend(obj)
+        pdf.extend(b"\nendobj\n")
+    xref = len(pdf)
+    pdf.extend(f"xref\n0 {len(objects) + 1}\n".encode("ascii"))
+    pdf.extend(b"0000000000 65535 f \n")
+    for offset in offsets[1:]:
+        pdf.extend(f"{offset:010d} 00000 n \n".encode("ascii"))
+    pdf.extend(f"trailer\n<< /Size {len(objects) + 1} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF\n".encode("ascii"))
+    return bytes(pdf)
+
+
 def make_pdf(data, document_url):
     """Build a branded A4 PDF with customer block, request, photo and QR code."""
     orange = (0.93, 0.42, 0.23)
@@ -310,10 +330,7 @@ def make_pdf(data, document_url):
 
     commands += [
         "q", "75 0 0 75 440 80 cm", "/QR Do", "Q",
-        "BT", "/F1 9 Tf", fill(orange), "55 125 Td", pdf_text("DOCUMENT EN LIGNE"), "ET",
     ]
-    for index, line in enumerate(wrap_lines(document_url, 58)[:3]):
-        commands += ["BT", "/F1 8 Tf", fill(muted), f"55 {108 - index * 11} Td", pdf_text(line), "ET"]
     legal_text = " - ".join(
         value for value in (
             LEGAL_BUSINESS_NAME,
@@ -331,28 +348,56 @@ def make_pdf(data, document_url):
     content = "\n".join(commands).encode("ascii")
 
     xobjects = " /XObject << " + " ".join(f"/{name} {ref} 0 R" for name, ref in image_refs.items()) + " >>"
-    objects[2] = (
-        f"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] "
-        f"/Resources << /Font << /F1 5 0 R >>{xobjects} >> /Contents 4 0 R >>"
-    ).encode("ascii")
     objects[3] = (
         b"<< /Length " + str(len(content)).encode("ascii") + b" >>\nstream\n" + content + b"\nendstream"
     )
+    escaped_url = document_url.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
+    annotation_ref = len(objects) + 1
+    objects.append(
+        f"<< /Type /Annot /Subtype /Link /Rect [440 80 515 155] /Border [0 0 0] "
+        f"/A << /S /URI /URI ({escaped_url}) >> >>".encode("ascii")
+    )
+    objects[2] = (
+        f"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] "
+        f"/Resources << /Font << /F1 5 0 R >>{xobjects} >> /Contents 4 0 R "
+        f"/Annots [{annotation_ref} 0 R] >>"
+    ).encode("ascii")
 
-    pdf = bytearray(b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n")
-    offsets = [0]
-    for number, obj in enumerate(objects, start=1):
-        offsets.append(len(pdf))
-        pdf.extend(f"{number} 0 obj\n".encode("ascii"))
-        pdf.extend(obj)
-        pdf.extend(b"\nendobj\n")
-    xref = len(pdf)
-    pdf.extend(f"xref\n0 {len(objects) + 1}\n".encode("ascii"))
-    pdf.extend(b"0000000000 65535 f \n")
-    for offset in offsets[1:]:
-        pdf.extend(f"{offset:010d} 00000 n \n".encode("ascii"))
-    pdf.extend(f"trailer\n<< /Size {len(objects) + 1} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF\n".encode("ascii"))
-    return bytes(pdf)
+    return serialize_pdf_objects(objects)
+
+
+def make_management_page(reference, status, observation, created_at):
+    """Build one appended PDF page containing the request status log."""
+    orange = (0.93, 0.42, 0.23)
+    ink = (0.09, 0.13, 0.12)
+    muted = (0.34, 0.38, 0.36)
+
+    def fill(color):
+        return f"{color[0]} {color[1]} {color[2]} rg"
+
+    commands = [
+        "BT", "/F1 24 Tf", fill(ink), "55 760 Td", pdf_text("SUIVI DE LA DEMANDE"), "ET",
+        "BT", "/F1 11 Tf", fill(orange), "55 715 Td", pdf_text("Référence"), "ET",
+        "BT", "/F1 14 Tf", fill(ink), "55 696 Td", pdf_text(reference), "ET",
+        "BT", "/F1 11 Tf", fill(orange), "55 650 Td", pdf_text("STATUT"), "ET",
+        "BT", "/F1 18 Tf", fill(ink), "55 625 Td", pdf_text(status), "ET",
+        "BT", "/F1 11 Tf", fill(orange), "55 575 Td", pdf_text("DATE DU JOURNAL"), "ET",
+        "BT", "/F1 11 Tf", fill(ink), "55 555 Td", pdf_text(created_at), "ET",
+        "BT", "/F1 11 Tf", fill(orange), "55 505 Td", pdf_text("OBSERVATION"), "ET",
+    ]
+    for index, line in enumerate(wrap_lines(observation, 72)[:12]):
+        commands.extend(["BT", "/F1 11 Tf", fill(muted), f"55 {480 - index * 18} Td", pdf_text(line), "ET"])
+    legal_text = " - ".join(value for value in (LEGAL_BUSINESS_NAME, LEGAL_EMAIL) if value)
+    commands += ["BT", "/F1 7 Tf", fill(muted), "55 42 Td", pdf_text(legal_text), "ET"]
+    content = "\n".join(commands).encode("ascii")
+    objects = [
+        b"<< /Type /Catalog /Pages 2 0 R >>",
+        b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>",
+        b"<< /Length " + str(len(content)).encode("ascii") + b" >>\nstream\n" + content + b"\nendstream",
+        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
+    ]
+    return serialize_pdf_objects(objects)
 
 
 def send_request_email(data, pdf_bytes, document_url):
@@ -419,6 +464,50 @@ def _pdf_text(pdf_path):
         len(result.stdout.splitlines()),
     )
     return result.stdout
+
+
+def _pdf_status(text):
+    lines = [line.strip() for line in text.splitlines()]
+    matches = []
+    for index, line in enumerate(lines):
+        if line in ("STATUT", "STATUT :"):
+            for candidate in lines[index + 1:]:
+                if candidate:
+                    matches.append(candidate)
+                    break
+    return matches[-1] if matches and matches[-1] in REQUEST_STATUSES else "A traiter"
+
+
+def append_management_page(pdf_path, reference, status, observation):
+    if not shutil.which("pdfunite"):
+        raise RuntimeError("Le programme pdfunite est requis pour journaliser le suivi dans le PDF")
+    management_fd, management_name = tempfile.mkstemp(prefix=f".{reference}-", suffix="-status.pdf", dir=REQUEST_STORAGE_DIR)
+    output_fd, output_name = tempfile.mkstemp(prefix=f".{reference}-", suffix="-updated.pdf", dir=REQUEST_STORAGE_DIR)
+    os.close(management_fd)
+    os.close(output_fd)
+    try:
+        Path(management_name).write_bytes(
+            make_management_page(
+                reference,
+                status,
+                observation,
+                datetime.now().astimezone().strftime("%d/%m/%Y à %H:%M"),
+            )
+        )
+        subprocess.run(
+            ["pdfunite", str(pdf_path), management_name, output_name],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+        os.replace(output_name, pdf_path)
+    finally:
+        for temporary_path in (management_name, output_name):
+            try:
+                Path(temporary_path).unlink()
+            except FileNotFoundError:
+                pass
 
 
 def _pdf_field(lines, label):
@@ -590,7 +679,10 @@ def collect_admin_stats():
         os.access(REQUEST_STORAGE_DIR, os.R_OK) if REQUEST_STORAGE_DIR.exists() else False,
     )
     if REQUEST_STORAGE_DIR.is_dir():
-        pdf_paths = sorted(REQUEST_STORAGE_DIR.glob("[A-F0-9][A-F0-9][A-F0-9][A-F0-9][A-F0-9][A-F0-9][A-F0-9][A-F0-9][A-F0-9][A-F0-9][A-F0-9][A-F0-9].pdf"))
+        pdf_paths = sorted(
+            path for path in REQUEST_STORAGE_DIR.glob("*.pdf")
+            if REQUEST_REFERENCE_RE.fullmatch(path.stem)
+        )
     else:
         pdf_paths = []
     LOGGER.info("Scan PDF admin: %s fichier(s) correspondant au motif", len(pdf_paths))
@@ -603,6 +695,7 @@ def collect_admin_stats():
             service = _pdf_field(lines, "BESOIN")
             availability = _pdf_field(lines, "DISPONIBILITÉ")
             urgency = _pdf_field(lines, "URGENCE")
+            request_status = _pdf_status(text)
             LOGGER.info(
                 "PDF analysé: fichier=%s caractères=%s lignes=%s besoin=%s disponibilité=%s urgence=%s code_postal=%s commune=%s",
                 pdf_path.name,
@@ -620,6 +713,7 @@ def collect_admin_stats():
                 "service": service,
                 "availability": availability,
                 "urgency": urgency,
+                "status": request_status,
                 "postcode": postcode,
                 "town": town,
                 "size_bytes": pdf_path.stat().st_size,
@@ -759,7 +853,7 @@ class SiteHandler(SimpleHTTPRequestHandler):
                 },
             })
             return
-        match = re.fullmatch(r"/requests/([A-F0-9]{12})\.pdf", path)
+        match = re.fullmatch(r"/requests/((?:[A-F0-9]{12}|[A-F0-9]{32}))\.pdf", path)
         if match:
             pdf_path = REQUEST_STORAGE_DIR / f"{match.group(1)}.pdf"
             if not pdf_path.is_file():
@@ -777,6 +871,37 @@ class SiteHandler(SimpleHTTPRequestHandler):
 
     def do_POST(self):
         path = urlparse(self.path).path
+        if path == "/api/admin/update-request":
+            if not self._require_admin():
+                return
+            if self.headers.get("X-Admin-Action") != "update-request":
+                self.respond_json(403, {"ok": False, "error": "Action d’administration non autorisée"})
+                return
+            try:
+                length = int(self.headers.get("Content-Length", "0"))
+                if length > 4_000:
+                    raise ValueError("Requête trop volumineuse")
+                payload = json.loads(self.rfile.read(length))
+                reference = str(payload.get("reference", "")).upper()
+                status = str(payload.get("status", "")).strip()
+                observation = str(payload.get("observation", "")).strip()
+                if not REQUEST_REFERENCE_RE.fullmatch(reference):
+                    raise ValueError("Référence de demande invalide")
+                if status not in REQUEST_STATUSES:
+                    raise ValueError("Statut de demande invalide")
+                if len(observation) > 2_000:
+                    raise ValueError("Observation trop longue")
+                pdf_path = REQUEST_STORAGE_DIR / f"{reference}.pdf"
+                if not pdf_path.is_file():
+                    self.respond_json(404, {"ok": False, "error": "PDF introuvable"})
+                    return
+                append_management_page(pdf_path, reference, status, observation or "Aucune observation")
+                self.respond_json(200, {"ok": True, "reference": reference, "status": status})
+            except (ValueError, json.JSONDecodeError) as error:
+                self.respond_json(400, {"ok": False, "error": str(error)})
+            except (OSError, subprocess.SubprocessError) as error:
+                self.respond_json(503, {"ok": False, "error": str(error)})
+            return
         if path == "/api/admin/delete-request":
             if not self._require_admin():
                 return
@@ -789,7 +914,7 @@ class SiteHandler(SimpleHTTPRequestHandler):
                     raise ValueError("Requête trop volumineuse")
                 payload = json.loads(self.rfile.read(length))
                 reference = str(payload.get("reference", "")).upper()
-                if not re.fullmatch(r"[A-F0-9]{12}", reference):
+                if not REQUEST_REFERENCE_RE.fullmatch(reference):
                     raise ValueError("Référence de demande invalide")
                 pdf_path = REQUEST_STORAGE_DIR / f"{reference}.pdf"
                 if not pdf_path.is_file():
@@ -815,7 +940,7 @@ class SiteHandler(SimpleHTTPRequestHandler):
                 raise ValueError("Champs obligatoires manquants")
             if not data.get("human_confirmed"):
                 raise ValueError("Confirmation humaine manquante")
-            data["request_id"] = uuid.uuid4().hex[:12].upper()
+            data["request_id"] = uuid.uuid4().hex.upper()
             data["created_at"] = datetime.now().astimezone().strftime("%d/%m/%Y à %H:%M")
             data["location"] = ", ".join(
                 value for value in (data.get("address"), data.get("postcode"), data.get("town")) if value
