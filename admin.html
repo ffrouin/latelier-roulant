@@ -71,6 +71,8 @@
     .traffic-table th:nth-child(3), .traffic-table td:nth-child(3) { width:20%; }
     .traffic-table th:nth-child(4), .traffic-table td:nth-child(4) { width:16%; }
     .traffic-table th:nth-child(5), .traffic-table td:nth-child(5) { width:20%; }
+    .ip-whois { color:var(--accent); text-decoration:underline dotted; text-underline-offset:3px; }
+    .ip-whois:hover { color:var(--ink); }
     .table-wrap { overflow:auto; }
     table { width:100%; table-layout:fixed; border-collapse:collapse; font-size:.76rem; }
     th,td { text-align:left; padding:8px 5px; border-bottom:1px solid var(--line); white-space:normal; overflow-wrap:anywhere; vertical-align:top; }
@@ -219,11 +221,12 @@
   }
   function renderThreats(threats) {
     const target = document.getElementById('threats');
-    target.innerHTML = threats?.length ? threats.map(item => `<tr><td>${esc(item.ip)}</td><td>${esc(item.country)}</td><td>${esc(item.city)}</td><td>${esc(item.reason)}</td><td>${number.format(item.requests)}<br><small>${number.format(item.errors)} erreur(s)</small></td><td>${(item.paths || []).map(path => esc(path)).join('<br>')}</td></tr>`).join('') : '<tr><td colspan="6" class="empty">Aucune menace détectée.</td></tr>';
+    target.innerHTML = threats?.length ? threats.map(item => `<tr><td>${whoisLink(item.ip)}</td><td>${esc(item.country)}</td><td>${esc(item.city)}</td><td>${esc(item.reason)}</td><td>${number.format(item.requests)}<br><small>${number.format(item.errors)} erreur(s)</small></td><td>${(item.paths || []).map(path => esc(path)).join('<br>')}</td></tr>`).join('') : '<tr><td colspan="6" class="empty">Aucune menace détectée.</td></tr>';
   }
+  const whoisLink = ip => `<a class="ip-whois" href="https://who.is/whois-ip/${encodeURIComponent(ip)}" target="_blank" rel="noopener noreferrer" title="Voir les données WHOIS de ${esc(ip)}">${esc(ip)}</a>`;
   function renderVisitors(visitors) {
     const target = document.getElementById('web-visitors');
-    target.innerHTML = visitors?.length ? visitors.map(item => `<tr><td>${esc(item.ip)}</td><td>${esc(item.country)}</td><td>${esc(item.city)}</td><td>${number.format(item.requests)}</td><td>${esc(item.last_seen)}</td></tr>`).join('') : '<tr><td colspan="5" class="empty">Aucun visiteur enregistré.</td></tr>';
+    target.innerHTML = visitors?.length ? visitors.map(item => `<tr><td>${whoisLink(item.ip)}</td><td>${esc(item.country)}</td><td>${esc(item.city)}</td><td>${number.format(item.requests)}</td><td>${esc(item.last_seen)}</td></tr>`).join('') : '<tr><td colspan="5" class="empty">Aucun visiteur enregistré.</td></tr>';
   }
   function render(data) {
     const r=data.requests, w=data.web;
