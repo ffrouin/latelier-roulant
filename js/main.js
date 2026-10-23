@@ -471,8 +471,16 @@ const humanFeedback = document.querySelector('#human-feedback');
 const requestPdf = document.querySelector('#request-pdf');
 const requestPdfViewer = document.querySelector('#request-pdf-viewer');
 const requestPdfDownload = document.querySelector('#request-pdf-download');
+const locationTown = document.querySelector('#location-town');
+const locationPostcode = document.querySelector('#location-postcode');
+const locationAddress = document.querySelector('#location-address');
+const addressSuggestions = document.querySelector('#location-address-suggestions');
+const addressStatus = document.querySelector('#location-address-status');
 let humanGameRound = 0;
 let stepTransitionInProgress = false;
+let addressLookupTimer;
+let addressLookupController;
+let addressSuggestionSelected = false;
 function updateProcessProgress(percent, label) {
   processProgressFill.style.width = `${percent}%`;
   processProgress.setAttribute('aria-valuenow', String(percent));
@@ -586,8 +594,68 @@ document.querySelector('#location-back').addEventListener('click', () => {
   updateProcessProgress(20, 'Étape 2 sur 5');
   serviceDetail.hidden = false;
 });
+function closeAddressSuggestions() {
+  addressSuggestions.hidden = true;
+  locationAddress.setAttribute('aria-expanded', 'false');
+}
+function renderAddressSuggestions(results) {
+  addressSuggestions.replaceChildren();
+  results.forEach((result, index) => {
+    const suggestion = document.createElement('button');
+    suggestion.type = 'button';
+    suggestion.className = 'address-suggestion';
+    suggestion.role = 'option';
+    suggestion.id = `address-suggestion-${index}`;
+    suggestion.textContent = result.fulltext || [result.street, result.zipcode, result.city].filter(Boolean).join(', ');
+    suggestion.addEventListener('click', () => {
+      const fulltext = result.fulltext || '';
+      const addressPart = fulltext.includes(',') ? fulltext.split(',')[0].trim() : (result.street || fulltext);
+      locationAddress.value = addressPart;
+      locationPostcode.value = result.zipcode || '';
+      locationTown.value = result.city || '';
+      addressSuggestionSelected = true;
+      addressStatus.textContent = 'Adresse sélectionnée.';
+      closeAddressSuggestions();
+    });
+    addressSuggestions.append(suggestion);
+  });
+  addressSuggestions.hidden = results.length === 0;
+  locationAddress.setAttribute('aria-expanded', results.length ? 'true' : 'false');
+}
+function lookupAddress() {
+  window.clearTimeout(addressLookupTimer);
+  if (addressLookupController) addressLookupController.abort();
+  addressSuggestionSelected = false;
+  const query = [locationAddress.value.trim(), locationPostcode.value.trim(), locationTown.value.trim()].filter(Boolean).join(' ');
+  if (query.length < 3) {
+    addressStatus.textContent = '';
+    closeAddressSuggestions();
+    return;
+  }
+  addressStatus.textContent = 'Recherche de l’adresse…';
+  addressLookupTimer = window.setTimeout(async () => {
+    addressLookupController = new AbortController();
+    try {
+      const url = `https://data.geopf.fr/geocodage/completion/?text=${encodeURIComponent(query)}&maximumResponses=6&type=StreetAddress`;
+      const response = await fetch(url, { signal: addressLookupController.signal, headers: { Accept: 'application/json' } });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const payload = await response.json();
+      const results = Array.isArray(payload.results) ? payload.results : [];
+      renderAddressSuggestions(results);
+      addressStatus.textContent = results.length ? 'Sélectionnez une adresse proposée ou poursuivez la saisie.' : 'Aucune adresse proposée ; vous pouvez continuer manuellement.';
+    } catch (error) {
+      if (error.name === 'AbortError') return;
+      closeAddressSuggestions();
+      addressStatus.textContent = 'Vérification momentanément indisponible ; vous pouvez continuer manuellement.';
+    }
+  }, 450);
+}
+[locationAddress, locationPostcode, locationTown].forEach((input) => input.addEventListener('input', lookupAddress));
+document.addEventListener('click', (event) => {
+  if (!event.target.closest('.address-lookup')) closeAddressSuggestions();
+});
 document.querySelector('#location-next').addEventListener('click', () => {
-  const town = document.querySelector('#location-town').value.trim();
+  const town = locationTown.value.trim();
   const availability = document.querySelector('#location-availability').value;
   const lastname = document.querySelector('#contact-lastname').value.trim();
   const firstname = document.querySelector('#contact-firstname').value.trim();
@@ -600,8 +668,8 @@ document.querySelector('#location-next').addEventListener('click', () => {
   document.querySelector('#summary-service').textContent = serviceSelection.textContent.replace('Besoin sélectionné : ', '').replace(/\.$/, '');
   document.querySelector('#summary-object').textContent = detailObject.value.trim() || 'Non précisé';
   document.querySelector('#summary-description').textContent = detailDescription.value.trim() || 'Non précisée';
-  const address = document.querySelector('#location-address').value.trim();
-  const postcode = document.querySelector('#location-postcode').value.trim();
+  const address = locationAddress.value.trim();
+  const postcode = locationPostcode.value.trim();
   const access = document.querySelector('#location-access').value.trim();
   const photo = document.querySelector('#detail-photo').files[0]?.name;
   document.querySelector('#summary-location').textContent = [address, postcode, town].filter(Boolean).join(', ');
