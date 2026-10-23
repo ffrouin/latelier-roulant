@@ -140,6 +140,13 @@ IP_EVENT_MAX = 120
 GEOIP_READER = None
 GEOIP_LEGACY_READER = None
 GEOIP_CACHE = {}
+GEOIP_DIAGNOSTICS = {
+    "last_mode": "not tested",
+    "last_path": "",
+    "last_error": "",
+    "lookups": 0,
+    "failures": 0,
+}
 
 
 def pdf_text(value):
@@ -603,10 +610,13 @@ def _geoip(ip):
     if cached is not None:
         return cached
     result = {"country": "—", "city": "—"}
+    GEOIP_DIAGNOSTICS["lookups"] += 1
     try:
         global GEOIP_READER, GEOIP_LEGACY_READER
         if Path(GEOIP_DB_PATH).is_file():
+            GEOIP_DIAGNOSTICS.update(last_mode="GeoIP2 mmdb", last_path=GEOIP_DB_PATH, last_error="")
             if GEOIP_READER is None:
+                LOGGER.info("GeoIP: utilisation de la base GeoIP2 %s", GEOIP_DB_PATH)
                 geoip_database = importlib.import_module("geoip2.database")
                 GEOIP_READER = geoip_database.Reader(GEOIP_DB_PATH)
             response = GEOIP_READER.city(ip)
@@ -623,7 +633,9 @@ def _geoip(ip):
             ]
             legacy_path = next((path for path in legacy_paths if path and Path(path).is_file()), "")
             if legacy_path:
+                GEOIP_DIAGNOSTICS.update(last_mode="GeoIP legacy dat", last_path=legacy_path, last_error="")
                 if GEOIP_LEGACY_READER is None:
+                    LOGGER.info("GeoIP: utilisation de la base legacy %s", legacy_path)
                     legacy_database = importlib.import_module("GeoIP")
                     GEOIP_LEGACY_READER = legacy_database.open(legacy_path, legacy_database.GEOIP_STANDARD)
                 record = GEOIP_LEGACY_READER.record_by_addr(ip) or {}
@@ -631,12 +643,39 @@ def _geoip(ip):
                     "country": record.get("country_name") or record.get("country_code") or "—",
                     "city": record.get("city") or "—",
                 }
+            else:
+                GEOIP_DIAGNOSTICS.update(last_mode="no database", last_path="", last_error="Aucune base GeoIP trouvée")
+                LOGGER.warning(
+                    "GeoIP indisponible: aucune base trouvée (mmdb=%s, legacy=%s)",
+                    GEOIP_DB_PATH,
+                    GEOIP_LEGACY_DB_PATH or "non configurée",
+                )
     except (ImportError, OSError, ValueError):
-        LOGGER.debug("Base GeoIP ou bibliothèque GeoIP indisponible pour %s", ip)
-    except Exception:
-        LOGGER.exception("Erreur GeoIP pour %s", ip)
+        GEOIP_DIAGNOSTICS["failures"] += 1
+        GEOIP_DIAGNOSTICS["last_error"] = "Bibliothèque absente, base illisible ou adresse invalide"
+        LOGGER.exception("GeoIP échec pour %s", ip)
+    except Exception as error:
+        GEOIP_DIAGNOSTICS["failures"] += 1
+        GEOIP_DIAGNOSTICS["last_error"] = str(error)
+        LOGGER.exception("GeoIP erreur inattendue pour %s", ip)
     GEOIP_CACHE[ip] = result
     return result
+
+
+def geoip_diagnostics():
+    candidates = [GEOIP_DB_PATH, GEOIP_LEGACY_DB_PATH, "/opt/GeoIPv2/GeoLiteCity.dat", "/opt/GeoIPv1/GeoLiteCity.dat"]
+    return {
+        **GEOIP_DIAGNOSTICS,
+        "configured_mmdb": GEOIP_DB_PATH,
+        "configured_legacy": GEOIP_LEGACY_DB_PATH or "",
+        "candidates": [
+            {"path": path, "exists": Path(path).is_file(), "readable": os.access(path, os.R_OK)}
+            for path in dict.fromkeys(path for path in candidates if path)
+        ],
+        "cache_entries": len(GEOIP_CACHE),
+        "geoip2_reader_loaded": GEOIP_READER is not None,
+        "legacy_reader_loaded": GEOIP_LEGACY_READER is not None,
+    }
 
 
 def collect_threats():
@@ -749,6 +788,7 @@ def collect_admin_stats():
                     reverse=True,
                 )[:200]
             ],
+            "geoip": geoip_diagnostics(),
         }
     def count_by(field):
         values = {}

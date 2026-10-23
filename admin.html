@@ -71,6 +71,7 @@
     .traffic-table th:nth-child(3), .traffic-table td:nth-child(3) { width:20%; }
     .traffic-table th:nth-child(4), .traffic-table td:nth-child(4) { width:16%; }
     .traffic-table th:nth-child(5), .traffic-table td:nth-child(5) { width:20%; }
+    .geoip-debug { margin:10px 0 0; padding:10px; overflow:auto; border:1px solid var(--line); border-radius:5px; color:var(--muted); background:var(--paper); font:.7rem/1.45 ui-monospace,SFMono-Regular,monospace; white-space:pre-wrap; }
     .table-wrap { overflow:auto; }
     table { width:100%; table-layout:fixed; border-collapse:collapse; font-size:.76rem; }
     th,td { text-align:left; padding:8px 5px; border-bottom:1px solid var(--line); white-space:normal; overflow-wrap:anywhere; vertical-align:top; }
@@ -115,14 +116,16 @@
       <div class="card"><div class="metric" id="storage">—</div><div class="metric-label">stockage PDF</div></div>
     </div>
     <div class="grid">
+      <section><h2>Menaces</h2><p>Détection locale sur les requêtes du processus depuis son démarrage. Les erreurs serveur 5xx sont affichées mais ne sont pas considérées seules comme une menace.</p><div class="table-wrap"><table class="threat-table"><thead><tr><th>IP</th><th>Pays</th><th>Ville</th><th>Raison</th><th>Requêtes</th><th>Chemins observés</th></tr></thead><tbody id="threats"></tbody></table></div></section>
+      <section><h2>Trafic web</h2><div class="metric-label">Codes HTTP</div><div class="bars" id="web-status"></div><div class="metric-label" style="margin-top:18px">Chemins consultés</div><div class="bars" id="web-paths"></div><div class="metric-label" style="margin-top:18px">Visiteurs et localisation GeoIP</div><div class="table-wrap"><table class="traffic-table"><thead><tr><th>IP</th><th>Pays</th><th>Ville</th><th>Requêtes</th><th>Dernière activité</th></tr></thead><tbody id="web-visitors"></tbody></table></div><div class="metric-label" style="margin-top:18px">Diagnostic GeoIP</div><pre class="geoip-debug" id="geoip-debug">Chargement…</pre></section>
+    </div>
+  </div>
+  <div id="tab-requests" class="tab-panel" role="tabpanel" aria-labelledby="tab-button-requests" hidden>
+    <div class="grid">
       <section><h2>Demandes par besoin</h2><div class="bars" id="services"></div></section>
       <section><h2>Demandes par urgence</h2><div class="bars" id="urgencies"></div></section>
       <section><h2>Disponibilités</h2><div class="bars" id="availability"></div></section>
-      <section><h2>Trafic web</h2><div class="metric-label">Codes HTTP</div><div class="bars" id="web-status"></div><div class="metric-label" style="margin-top:18px">Chemins consultés</div><div class="bars" id="web-paths"></div><div class="metric-label" style="margin-top:18px">Visiteurs et localisation GeoIP</div><div class="table-wrap"><table class="traffic-table"><thead><tr><th>IP</th><th>Pays</th><th>Ville</th><th>Requêtes</th><th>Dernière activité</th></tr></thead><tbody id="web-visitors"></tbody></table></div></section>
     </div>
-    <section><h2>Menaces</h2><p>Détection locale sur les requêtes du processus depuis son démarrage. Les erreurs serveur 5xx sont affichées mais ne sont pas considérées seules comme une menace.</p><div class="table-wrap"><table class="threat-table"><thead><tr><th>IP</th><th>Pays</th><th>Ville</th><th>Raison</th><th>Requêtes</th><th>Chemins observés</th></tr></thead><tbody id="threats"></tbody></table></div></section>
-  </div>
-  <div id="tab-requests" class="tab-panel" role="tabpanel" aria-labelledby="tab-button-requests" hidden>
     <section><h2>PDF analysés dans le dossier de demandes</h2><div class="table-wrap"><table><thead><tr><th><button data-sort="reference">Référence ↕</button></th><th><button data-sort="date">Date ↕</button></th><th><button data-sort="postcode">CODE POSTAL ↕</button></th><th><button data-sort="town">COMMUNE ↕</button></th><th><button data-sort="service">Besoin ↕</button></th><th><button data-sort="availability">Disponibilité ↕</button></th><th><button data-sort="urgency">Urgence ↕</button></th><th><button data-sort="status">Statut ↕</button></th><th><button data-sort="size_bytes">Taille ↕</button></th><th class="actions">Actions</th></tr></thead><tbody id="requests"></tbody></table></div></section>
   </div>
   <dialog id="followup-dialog" aria-labelledby="followup-title">
@@ -220,6 +223,16 @@
     const target = document.getElementById('web-visitors');
     target.innerHTML = visitors?.length ? visitors.map(item => `<tr><td>${esc(item.ip)}</td><td>${esc(item.country)}</td><td>${esc(item.city)}</td><td>${number.format(item.requests)}</td><td>${esc(item.last_seen)}</td></tr>`).join('') : '<tr><td colspan="5" class="empty">Aucun visiteur enregistré.</td></tr>';
   }
+  function renderGeoipDiagnostics(diagnostic) {
+    const lines = diagnostic ? [
+      `mode: ${diagnostic.last_mode || '—'}`,
+      `base utilisée: ${diagnostic.last_path || '—'}`,
+      `erreur: ${diagnostic.last_error || '—'}`,
+      `appels: ${number.format(diagnostic.lookups || 0)} | échecs: ${number.format(diagnostic.failures || 0)} | cache: ${number.format(diagnostic.cache_entries || 0)}`,
+      ...(diagnostic.candidates || []).map(item => `${item.exists ? 'OK' : 'ABSENT'} ${item.readable ? 'lisible' : 'non lisible'} — ${item.path}`),
+    ] : ['Aucun diagnostic GeoIP reçu'];
+    document.getElementById('geoip-debug').textContent = lines.join('\n');
+  }
   function render(data) {
     const r=data.requests, w=data.web;
     document.getElementById('request-count').textContent=number.format(r.count);
@@ -229,7 +242,7 @@
     document.getElementById('updated').textContent=`Mis à jour ${new Date(data.generated_at).toLocaleString('fr-FR')}`;
     document.getElementById('commit').textContent=`Commit chargé : ${data.commit || 'inconnu'}`;
     bars('services',r.by_service); bars('urgencies',r.by_urgency); bars('availability',r.by_availability);
-    bars('web-status',w.by_status); renderPaths(w.by_path_status); renderVisitors(w.visitors); renderThreats(data.threats);
+    bars('web-status',w.by_status); renderPaths(w.by_path_status); renderVisitors(w.visitors); renderGeoipDiagnostics(w.geoip); renderThreats(data.threats);
     requestItems = r.items || [];
     renderRequests();
   }
