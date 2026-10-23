@@ -51,7 +51,17 @@ def get_commit_reference():
             return "inconnu"
     try:
         commit = subprocess.run(
-            ["git", "-C", str(ROOT), "rev-parse", "--short", "HEAD"],
+            [
+                "git",
+                "-c",
+                f"safe.directory={ROOT}",
+                "--no-optional-locks",
+                "-C",
+                str(ROOT),
+                "rev-parse",
+                "--short",
+                "HEAD",
+            ],
             check=True,
             capture_output=True,
             text=True,
@@ -61,6 +71,12 @@ def get_commit_reference():
             LOGGER.info("Commit récupéré avec git: %s", commit)
             return commit
         LOGGER.warning("git a retourné une référence invalide: %r", commit)
+    except subprocess.CalledProcessError as error:
+        LOGGER.warning(
+            "Impossible d'exécuter git (code=%s): %s",
+            error.returncode,
+            (error.stderr or "").strip() or error,
+        )
     except (OSError, subprocess.SubprocessError) as error:
         LOGGER.warning("Impossible d'exécuter git: %s", error)
     try:
