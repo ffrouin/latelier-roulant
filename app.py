@@ -374,8 +374,8 @@ def make_pdf(data, document_url):
     return serialize_pdf_objects(objects)
 
 
-def make_management_page(reference, status, observation, created_at):
-    """Build one appended PDF page containing the request status log."""
+def make_management_page(reference, history):
+    """Build a transparent overlay that keeps request follow-up on page one."""
     orange = (0.93, 0.42, 0.23)
     ink = (0.09, 0.13, 0.12)
     muted = (0.34, 0.38, 0.36)
@@ -383,20 +383,21 @@ def make_management_page(reference, status, observation, created_at):
     def fill(color):
         return f"{color[0]} {color[1]} {color[2]} rg"
 
+    current = history[-1]
     commands = [
-        "BT", "/F1 24 Tf", fill(ink), "55 760 Td", pdf_text("SUIVI DE LA DEMANDE"), "ET",
-        "BT", "/F1 11 Tf", fill(orange), "55 715 Td", pdf_text("Référence"), "ET",
-        "BT", "/F1 14 Tf", fill(ink), "55 696 Td", pdf_text(reference), "ET",
-        "BT", "/F1 11 Tf", fill(orange), "55 650 Td", pdf_text("STATUT"), "ET",
-        "BT", "/F1 18 Tf", fill(ink), "55 625 Td", pdf_text(status), "ET",
-        "BT", "/F1 11 Tf", fill(orange), "55 575 Td", pdf_text("DATE DU JOURNAL"), "ET",
-        "BT", "/F1 11 Tf", fill(ink), "55 555 Td", pdf_text(created_at), "ET",
-        "BT", "/F1 11 Tf", fill(orange), "55 505 Td", pdf_text("OBSERVATION"), "ET",
+        "BT", "/F1 10 Tf", fill(orange), "55 188 Td", pdf_text("SUIVI"), "ET",
+        "BT", "/F1 12 Tf", fill(ink), "95 188 Td", pdf_text(current["status"]), "ET",
     ]
-    for index, line in enumerate(wrap_lines(observation, 72)[:12]):
-        commands.extend(["BT", "/F1 11 Tf", fill(muted), f"55 {480 - index * 18} Td", pdf_text(line), "ET"])
-    legal_text = " - ".join(value for value in (LEGAL_BUSINESS_NAME, LEGAL_EMAIL) if value)
-    commands += ["BT", "/F1 7 Tf", fill(muted), "55 42 Td", pdf_text(legal_text), "ET"]
+    entries = history[-12:]
+    if len(history) > len(entries):
+        commands.extend(["BT", "/F1 6 Tf", fill(muted), "55 176 Td", pdf_text(f"{len(history) - len(entries)} entrée(s) antérieure(s) non affichée(s)"), "ET"])
+    y = 176 if len(history) == len(entries) else 164
+    for entry in entries:
+        line = f"{entry['date']} — {entry['status']} — {entry['observation']}"
+        commands.extend(["BT", "/F1 6 Tf", fill(muted), f"55 {y} Td", pdf_text(wrap_lines(line, 112)[0][:150]), "ET"])
+        y -= 9
+        if y < 82:
+            break
     content = "\n".join(commands).encode("ascii")
     objects = [
         b"<< /Type /Catalog /Pages 2 0 R >>",
@@ -483,27 +484,63 @@ def _pdf_status(text):
                 if candidate:
                     matches.append(candidate)
                     break
-    return matches[-1] if matches and matches[-1] in REQUEST_STATUSES else "A traiter"
+    if matches and matches[-1] in REQUEST_STATUSES:
+        return matches[-1]
+    history = _pdf_management_history(text)
+    return history[-1]["status"] if history else "A traiter"
+
+
+def _pdf_management_history(text):
+    history = []
+    for page in text.split("\f"):
+        if "SUIVI DE LA DEMANDE" in page:
+            lines = [line.strip() for line in page.splitlines() if line.strip()]
+            try:
+                status_index = lines.index("STATUT")
+                date_index = lines.index("DATE DU JOURNAL")
+                observation_index = lines.index("OBSERVATION")
+                status = lines[status_index + 1]
+                date = lines[date_index + 1]
+                observation = " ".join(lines[observation_index + 1:])
+                if status in REQUEST_STATUSES:
+                    history.append({"status": status, "date": date, "observation": observation or "Aucune observation"})
+            except (ValueError, IndexError):
+                continue
+        elif "SUIVI" in page:
+            lines = [line.strip() for line in page.splitlines() if line.strip()]
+            for line in lines:
+                match = re.match(r"^(\d{2}/\d{2}/\d{4} à \d{2}:\d{2})\s+—\s+(.+?)\s+—\s+(.*)$", line)
+                if match and match.group(2) in REQUEST_STATUSES:
+                    history.append({"date": match.group(1), "status": match.group(2), "observation": match.group(3)})
+    return history
 
 
 def append_management_page(pdf_path, reference, status, observation):
-    if not shutil.which("pdfunite"):
-        raise RuntimeError("Le programme pdfunite est requis pour journaliser le suivi dans le PDF")
+    if not shutil.which("qpdf"):
+        raise RuntimeError("Le programme qpdf est requis pour journaliser le suivi sur la page PDF")
     management_fd, management_name = tempfile.mkstemp(prefix=f".{reference}-", suffix="-status.pdf", dir=REQUEST_STORAGE_DIR)
+    base_fd, base_name = tempfile.mkstemp(prefix=f".{reference}-", suffix="-base.pdf", dir=REQUEST_STORAGE_DIR)
     output_fd, output_name = tempfile.mkstemp(prefix=f".{reference}-", suffix="-updated.pdf", dir=REQUEST_STORAGE_DIR)
     os.close(management_fd)
+    os.close(base_fd)
     os.close(output_fd)
     try:
-        Path(management_name).write_bytes(
-            make_management_page(
-                reference,
-                status,
-                observation,
-                datetime.now().astimezone().strftime("%d/%m/%Y à %H:%M"),
-            )
+        history = _pdf_management_history(_pdf_text(pdf_path))
+        history.append({
+            "status": status,
+            "date": datetime.now().astimezone().strftime("%d/%m/%Y à %H:%M"),
+            "observation": observation or "Aucune observation",
+        })
+        Path(management_name).write_bytes(make_management_page(reference, history))
+        subprocess.run(
+            ["qpdf", str(pdf_path), "--pages", ".", "1", "--", base_name],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=15,
         )
         subprocess.run(
-            ["pdfunite", str(pdf_path), management_name, output_name],
+            ["qpdf", "--overlay", management_name, "--", base_name, output_name],
             check=True,
             capture_output=True,
             text=True,
@@ -511,7 +548,7 @@ def append_management_page(pdf_path, reference, status, observation):
         )
         os.replace(output_name, pdf_path)
     finally:
-        for temporary_path in (management_name, output_name):
+        for temporary_path in (management_name, base_name, output_name):
             try:
                 Path(temporary_path).unlink()
             except FileNotFoundError:
@@ -811,6 +848,7 @@ def collect_admin_stats():
             "by_service": count_by("service"),
             "by_availability": count_by("availability"),
             "by_urgency": count_by("urgency"),
+            "by_status": count_by("status"),
             "items": list(reversed(request_rows[-200:])),
         },
     }

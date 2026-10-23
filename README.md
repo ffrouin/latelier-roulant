@@ -89,9 +89,9 @@ GeoIP locale peut les déterminer. La géolocalisation est facultative et
 utilise en priorité une base GeoIP2 `.mmdb`, puis accepte les anciennes bases GeoLite City `.dat` via `GEOIP_LEGACY_DB_PATH` (par exemple `/opt/GeoIPv2/GeoLiteCity.dat`) ; sans bibliothèque ou base compatible, le pays et la ville restent affichés comme non disponibles.
 
 La génération du PDF enrichi utilise Pillow et `qrencode` pour intégrer la
-photo envoyée et le QR code. Le suivi PDF utilise également `pdfunite`
-(paquet `poppler-utils`) afin d’ajouter chaque entrée au document existant.
-Le compte du service doit pouvoir écrire dans
+photo envoyée et le QR code. Le suivi PDF utilise également `qpdf`
+(paquet `qpdf`) afin d’ajouter l’historique directement sur la première page
+sans créer de page supplémentaire. Le compte du service doit pouvoir écrire dans
 `REQUEST_STORAGE_DIR`, qui contient les PDF accessibles par leur référence.
 Avec un service systemd utilisant `ProtectSystem=strict`, ajoutez également
 `ReadWritePaths=/opt/latelier-roulant/requests` dans la section
