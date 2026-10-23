@@ -28,7 +28,8 @@ logging.basicConfig(
 )
 LOGGER = logging.getLogger("latelier-roulant")
 
-ROOT = Path(environ.get("APP_HOME", str(Path(__file__).resolve().parent))).expanduser().resolve()
+APP_HOME = environ.get("APP_HOME")
+ROOT = (Path(APP_HOME).expanduser() if APP_HOME else Path(__file__).resolve().parent)
 PORT = int(environ.get("PORT", "8000"))
 OWNER_EMAIL = environ.get("OWNER_EMAIL", "freddy@linuxtribe.fr")
 SMTP_HOST = environ.get("SMTP_HOST", "cgpro.linuxtribe.fr")
