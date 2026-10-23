@@ -39,6 +39,11 @@ OWNER_EMAIL = environ.get("OWNER_EMAIL", "me@my.mail")
 SMTP_HOST = environ.get("SMTP_HOST", "smtp.my.mail")
 SMTP_USERNAME = environ.get("SMTP_USERNAME", OWNER_EMAIL)
 PUBLIC_BASE_URL = environ.get("PUBLIC_BASE_URL", "https://atelier-roulant.linuxtribe.fr").rstrip("/")
+LEGAL_BUSINESS_NAME = environ.get("LEGAL_BUSINESS_NAME", "L'Atelier Roulant")
+LEGAL_CONTACT_NAME = environ.get("LEGAL_CONTACT_NAME", "")
+LEGAL_PHONE = environ.get("LEGAL_PHONE", "")
+LEGAL_REGISTRATION = environ.get("LEGAL_REGISTRATION", "")
+LEGAL_EMAIL = environ.get("LEGAL_EMAIL", OWNER_EMAIL)
 DEFAULT_REQUEST_STORAGE_DIR = ROOT / "requests" if (ROOT / "requests").is_dir() else ROOT / "data" / "requests"
 REQUEST_STORAGE_DIR = Path(environ.get("REQUEST_STORAGE_DIR", str(DEFAULT_REQUEST_STORAGE_DIR)))
 ADMIN_USERNAME = environ.get("ADMIN_USERNAME", "admin")
@@ -230,10 +235,10 @@ def make_pdf(data, document_url):
         "0.82 0.83 0.80 rg",
         circle(323, 829, 1.5) + " f", circle(330, 826, 1.5) + " f", circle(337, 829, 1.5) + " f",
         circle(408, 829, 1.5) + " f", circle(415, 826, 1.5) + " f", circle(422, 829, 1.5) + " f",
-        "BT", "/F1 24 Tf", fill(ink), "55 810 Td", pdf_text("L'ATELIER ROULANT"), "ET",
+        "BT", "/F1 24 Tf", fill(ink), "55 810 Td", pdf_text(LEGAL_BUSINESS_NAME.upper()), "ET",
         "BT", "/F1 10 Tf", fill(orange), "55 790 Td", pdf_text("Réparer plutôt que remplacer"), "ET",
-        "BT", "/F1 10 Tf", fill(ink), "455 815 Td", pdf_text("L'Atelier Roulant"), "ET",
-        "BT", "/F1 9 Tf", fill(orange), "455 798 Td", pdf_text("me@my.mail"), "ET",
+        "BT", "/F1 10 Tf", fill(ink), "455 815 Td", pdf_text(LEGAL_CONTACT_NAME or LEGAL_BUSINESS_NAME), "ET",
+        "BT", "/F1 9 Tf", fill(orange), "455 798 Td", pdf_text(LEGAL_EMAIL), "ET",
         "Q",
     ]
 
@@ -309,7 +314,15 @@ def make_pdf(data, document_url):
     ]
     for index, line in enumerate(wrap_lines(document_url, 58)[:3]):
         commands += ["BT", "/F1 8 Tf", fill(muted), f"55 {108 - index * 11} Td", pdf_text(line), "ET"]
-    legal_text = "L'Atelier Roulant - me@my.mail"
+    legal_text = " - ".join(
+        value for value in (
+            LEGAL_BUSINESS_NAME,
+            LEGAL_CONTACT_NAME,
+            LEGAL_PHONE,
+            LEGAL_REGISTRATION,
+            LEGAL_EMAIL,
+        ) if value
+    )
     legal_x = (595 - len(legal_text) * 7 * 0.48) / 2
     commands += [
         "BT", "/F1 9 Tf", fill(muted), "55 42 Td", pdf_text(f"Référence : {data['request_id']}"), "ET",
@@ -734,6 +747,17 @@ class SiteHandler(SimpleHTTPRequestHandler):
             if not self._require_admin():
                 return
             self.respond_json(200, collect_admin_stats())
+            return
+        if path == "/api/public-config":
+            self.respond_json(200, {
+                "legal": {
+                    "business_name": LEGAL_BUSINESS_NAME,
+                    "contact_name": LEGAL_CONTACT_NAME,
+                    "phone": LEGAL_PHONE,
+                    "registration": LEGAL_REGISTRATION,
+                    "email": LEGAL_EMAIL,
+                },
+            })
             return
         match = re.fullmatch(r"/requests/([A-F0-9]{12})\.pdf", path)
         if match:

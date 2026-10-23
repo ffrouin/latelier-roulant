@@ -471,6 +471,7 @@ const humanFeedback = document.querySelector('#human-feedback');
 const requestPdf = document.querySelector('#request-pdf');
 const requestPdfViewer = document.querySelector('#request-pdf-viewer');
 const requestPdfDownload = document.querySelector('#request-pdf-download');
+const legalFooter = document.querySelector('#legal-footer');
 const locationTown = document.querySelector('#location-town');
 const locationPostcode = document.querySelector('#location-postcode');
 const locationAddress = document.querySelector('#location-address');
@@ -481,6 +482,19 @@ let stepTransitionInProgress = false;
 let addressLookupTimer;
 let addressLookupController;
 let addressSuggestionSelected = false;
+async function loadPublicConfig() {
+  if (!legalFooter) return;
+  try {
+    const response = await fetch('/api/public-config', { cache: 'no-store' });
+    if (!response.ok) return;
+    const payload = await response.json();
+    const legal = payload.legal || {};
+    legalFooter.textContent = [legal.business_name, legal.contact_name, legal.phone, legal.registration, legal.email].filter(Boolean).join(' - ');
+  } catch (error) {
+    // The generic footer remains visible if the public configuration is unavailable.
+  }
+}
+loadPublicConfig();
 function updateProcessProgress(percent, label) {
   processProgressFill.style.width = `${percent}%`;
   processProgress.setAttribute('aria-valuenow', String(percent));
