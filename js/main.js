@@ -441,6 +441,9 @@ function animate(time) {
   requestAnimationFrame(animate);
 }
 const offerButton = document.querySelector('.cta');
+const mairieButton = document.querySelector('#mairie-button');
+const mairieScene = document.querySelector('#mairie-scene');
+const mairieBack = document.querySelector('#mairie-back');
 const serviceScene = document.querySelector('#service-scene');
 const serviceContent = serviceScene.querySelector('.service-content');
 const processProgress = document.querySelector('#process-progress');
@@ -546,6 +549,18 @@ offerButton.addEventListener('click', (event) => {
   document.querySelector('#scene').classList.add('is-fading');
   servicePanel.classList.add('is-fading');
   serviceScene.classList.add('is-visible');
+});
+mairieButton.addEventListener('click', () => {
+  mairieScene.hidden = false;
+  document.querySelector('.page').classList.add('is-fading-out');
+  window.requestAnimationFrame(() => mairieScene.classList.add('is-visible'));
+});
+mairieBack.addEventListener('click', () => {
+  mairieScene.classList.remove('is-visible');
+  window.setTimeout(() => {
+    mairieScene.hidden = true;
+    document.querySelector('.page').classList.remove('is-fading-out');
+  }, 800);
 });
 document.querySelector('#service-home-back').addEventListener('click', () => {
   serviceScene.classList.remove('is-visible');

@@ -38,21 +38,33 @@
     nav a { color:var(--ink); text-decoration:none; font-size:.9rem; font-weight:600; }
     .hero { flex:1; width:100%; min-height:0; position:relative; display:block; margin:0; padding:96px clamp(24px,5vw,76px) 40px; overflow:hidden; }
     .copy { position:relative; z-index:2; max-width:520px; margin-top:clamp(42px,8vh,110px); padding:28px 34px 30px; background:#f3f1e9; border:1px solid rgba(24,33,31,.12); border-radius:18px; box-shadow:0 18px 45px rgba(24,33,31,.12); text-align:justify; text-align-last:center; transition:opacity .8s ease, transform .8s ease; }
+    .page.is-fading-out { opacity:0; transform:scale(.985); pointer-events:none; transition:opacity .8s ease, transform .8s ease; }
     .copy.is-fading { opacity:0; transform:translateY(-16px); pointer-events:none; }
     .eyebrow { color:var(--accent); font-weight:700; letter-spacing:.14em; text-transform:uppercase; font-size:.72rem; margin-bottom:22px; }
     h1 { font:700 clamp(2.8rem,5.5vw,5.8rem)/.88 'Space Grotesk',sans-serif; letter-spacing:-.075em; margin:0 0 28px; max-width:700px; }
     h1 em { color:var(--accent); font-style:normal; }
     .tagline { font-size:clamp(1.15rem,2vw,1.55rem); line-height:1.35; max-width:470px; margin:0 auto 35px; color:#40504a; }
     .eyebrow, h1, .cta { text-align:center; }
-    .cta { display:inline-flex; align-items:center; gap:12px; padding:15px 20px; border-radius:999px; color:#fff; background:var(--ink); text-decoration:none; font-weight:700; transition:transform .2s, background .2s; }
+    .hero-actions { display:flex; flex-direction:column; align-items:center; gap:10px; }
+    .cta { display:inline-flex; align-items:center; gap:12px; padding:15px 20px; border:0; border-radius:999px; color:#fff; background:var(--ink); font:700 .9rem 'DM Sans',sans-serif; cursor:pointer; text-decoration:none; transition:transform .2s, background .2s; }
     .cta:hover { transform:translateY(-2px); background:var(--accent); }
     .cta::after { content:'↗'; font-size:1.1rem; }
+    .mairie-cta { display:inline-flex; align-items:center; padding:10px 18px; border:1px solid rgba(24,33,31,.22); border-radius:999px; color:var(--ink); background:transparent; font:600 .84rem 'DM Sans',sans-serif; cursor:pointer; transition:transform .2s, border-color .2s, color .2s, background .2s; }
+    .mairie-cta:hover { transform:translateY(-2px); border-color:var(--accent); color:#fff; background:var(--accent); }
     #scene { position:absolute; inset:0; z-index:0; width:100%; height:100%; min-height:0; max-width:none; pointer-events:auto; cursor:grab; transition:opacity .9s ease, filter .9s ease; }
     #scene.is-fading { opacity:0; filter:blur(8px); pointer-events:none; }
     #scene.is-orbiting { cursor:grabbing; }
     #scene canvas { display:block; width:100%; height:100%; }
     .service-scene { position:fixed; inset:0; z-index:20; display:block; overflow-y:auto; overscroll-behavior:contain; padding:96px clamp(24px,6vw,96px) 48px; background:var(--paper); opacity:0; transform:translateY(18px); pointer-events:none; transition:opacity .8s ease, transform .8s ease; }
     .service-scene.is-visible { opacity:1; transform:translateY(0); pointer-events:auto; }
+    .mairie-scene { position:fixed; inset:0; z-index:30; display:grid; place-items:center; padding:40px 24px; background:var(--paper); opacity:0; transform:translateY(18px); pointer-events:none; transition:opacity .8s ease, transform .8s ease; }
+    .mairie-scene.is-visible { opacity:1; transform:translateY(0); pointer-events:auto; }
+    .mairie-content { width:min(820px,100%); padding:clamp(28px,6vw,72px); border:1px solid var(--line); background:rgba(255,255,255,.72); box-shadow:0 18px 45px rgba(24,33,31,.1); }
+    .mairie-content h2 { margin:0; font:700 clamp(2.2rem,6vw,5.4rem)/.92 'Space Grotesk',sans-serif; letter-spacing:-.07em; }
+    .mairie-content h2 em { color:var(--accent); font-style:normal; }
+    .mairie-content p { max-width:600px; margin:24px 0 30px; color:var(--muted); font-size:1.05rem; line-height:1.55; }
+    .mairie-back { border:0; padding:12px 18px; color:#fff; background:var(--ink); font:600 .86rem 'DM Sans',sans-serif; cursor:pointer; }
+    .mairie-back:hover { background:var(--accent); }
     .process-progress { position:absolute; top:24px; left:clamp(24px,6vw,96px); right:clamp(24px,6vw,96px); z-index:2; }
     .process-progress-line { position:relative; height:18px; }
     .process-progress-line::before, .process-progress-fill { content:''; position:absolute; left:0; right:0; top:7px; height:4px; border-radius:99px; }
@@ -157,7 +169,7 @@
         <div class="eyebrow">Réparation · dépannage · réemploi</div>
         <h1 id="titre-principal">Réparer<br><em>plutôt que</em><br>remplacer.</h1>
         <p class="tagline">Vos réparations et dépannages à domicile, pour diagnostiquer, réparer et donner une seconde vie à ce qui vous entoure.</p>
-        <a class="cta" href="#services">Découvrir l’offre</a>
+        <div class="hero-actions"><button class="cta" id="offer-button" type="button">Découvrir l’offre</button><button class="mairie-cta" id="mairie-button" type="button">Informations Mairies</button></div>
       </div>
       <div id="scene" aria-label="Illustration 3D d’un atelier mobile"></div>
     </section>
@@ -273,6 +285,14 @@
     </section>
     <footer><span id="legal-footer">L'Atelier Roulant</span></footer>
   </main>
+  <section class="mairie-scene" id="mairie-scene" aria-labelledby="mairie-title" hidden>
+    <div class="mairie-content">
+      <div class="eyebrow">L’Atelier Roulant · collectivités</div>
+      <h2 id="mairie-title">Informations <em>Mairies</em></h2>
+      <p>Un espace dédié aux communes et aux collectivités pour découvrir nos actions de réparation, de réemploi et de service de proximité.</p>
+      <button class="mairie-back" id="mairie-back" type="button">← Retour à l’accueil</button>
+    </div>
+  </section>
   <script type="module" src="js/main.js"></script>
 </body>
 </html>
