@@ -50,14 +50,15 @@ def get_commit_reference():
             LOGGER.exception("Impossible de lire le fichier .git")
             return "inconnu"
     try:
+        git_root = ROOT.resolve()
         commit = subprocess.run(
             [
                 "git",
                 "-c",
-                f"safe.directory={ROOT}",
+                f"safe.directory={git_root}",
                 "--no-optional-locks",
                 "-C",
-                str(ROOT),
+                str(git_root),
                 "rev-parse",
                 "--short",
                 "HEAD",
