@@ -29,6 +29,21 @@ Le port peut être modifié :
 PORT=8080 python3 app.py
 ```
 
+### Vérifier les dépendances au démarrage
+
+Avant de lancer le serveur, exécutez le contrôle reproductible suivant :
+
+```bash
+python3 scripts/check_dependencies.py
+```
+
+Il vérifie Python/Pillow, les binaires `qrencode`, `qpdf` et `pdftotext`,
+les fichiers de l’application, le stockage des demandes, la configuration
+SMTP et l’URL publique. `git` et GeoIP sont signalés lorsqu’ils sont
+disponibles ou configurés. Le serveur exécute également ces contrôles au
+démarrage et écrit un avertissement explicite dans ses logs sans empêcher le
+démarrage local.
+
 ### Envoi des demandes
 
 Après la confirmation humaine, le serveur génère un PDF de synthèse et

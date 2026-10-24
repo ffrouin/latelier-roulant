@@ -6,7 +6,7 @@ from collections import defaultdict, deque
 from datetime import datetime
 import hmac
 import ipaddress
-import importlib
+import importlib.util
 import io
 import json
 import logging
@@ -125,6 +125,45 @@ def get_commit_reference():
 
 APP_COMMIT = get_commit_reference()
 SERVER_STARTED_AT = time.time()
+
+
+def log_startup_dependency_checks():
+    """Report missing runtime dependencies without preventing local boot."""
+    required_commands = {
+        "qrencode": "génération du QR code PDF",
+        "qpdf": "suivi des demandes dans les PDF",
+        "pdftotext": "analyse des PDF dans l’administration",
+    }
+    for command, purpose in required_commands.items():
+        if shutil.which(command):
+            LOGGER.info("Dépendance disponible: %s (%s)", command, purpose)
+        else:
+            LOGGER.warning("Dépendance manquante: %s (%s)", command, purpose)
+    if importlib.util.find_spec("PIL"):
+        LOGGER.info("Dépendance Python disponible: Pillow")
+    else:
+        LOGGER.warning("Dépendance Python manquante: Pillow")
+    if Path(GEOIP_DB_PATH).is_file():
+        if importlib.util.find_spec("geoip2"):
+            LOGGER.info("GeoIP2 configuré: %s", GEOIP_DB_PATH)
+        else:
+            LOGGER.warning("Base GeoIP2 présente mais bibliothèque Python manquante: geoip2")
+    if GEOIP_LEGACY_DB_PATH and Path(GEOIP_LEGACY_DB_PATH).is_file():
+        if importlib.util.find_spec("GeoIP"):
+            LOGGER.info("GeoIP legacy configuré: %s", GEOIP_LEGACY_DB_PATH)
+        else:
+            LOGGER.warning("Base GeoIP legacy présente mais bibliothèque Python manquante: GeoIP")
+    if environ.get("SMTP_PASSWORD"):
+        LOGGER.info("Configuration SMTP: mot de passe présent")
+    else:
+        LOGGER.warning("Configuration SMTP incomplète: SMTP_PASSWORD absent; les soumissions échoueront")
+    if REQUEST_STORAGE_DIR.exists() and os.access(REQUEST_STORAGE_DIR, os.W_OK):
+        LOGGER.info("Stockage des demandes accessible en écriture: %s", REQUEST_STORAGE_DIR)
+    else:
+        LOGGER.warning("Stockage des demandes absent ou non inscriptible: %s", REQUEST_STORAGE_DIR)
+
+
+log_startup_dependency_checks()
 WEB_STATS_LOCK = threading.Lock()
 WEB_STATS = {
     "total_requests": 0,
