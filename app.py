@@ -455,17 +455,14 @@ def make_pdf(data, document_url):
 
     # Only render the photo block when a photo was actually supplied.
     if photo_dimensions:
-        commands += [
-            "BT", "/F1 6 Tf", fill(orange), "55 265 Td", pdf_text("PHOTOS JOINTES"), "ET",
-        ]
-        max_width, max_height, gap = 475, 90, 8
+        max_width, max_height, gap = 430, 370, 8
         tile_width = (max_width - gap * (len(photo_dimensions) - 1)) / len(photo_dimensions)
         for index, (photo_width, photo_height) in enumerate(photo_dimensions, start=1):
             photo_scale = min(tile_width / photo_width, max_height / photo_height)
             drawn_width = photo_width * photo_scale
             drawn_height = photo_height * photo_scale
             photo_x = 55 + (index - 1) * (tile_width + gap) + (tile_width - drawn_width) / 2
-            photo_y = 65 + (max_height - drawn_height) / 2
+            photo_y = 70 + max_height - drawn_height
             commands += [
                 "q", f"{drawn_width:.3f} 0 0 {drawn_height:.3f} {photo_x:.3f} {photo_y:.3f} cm", f"/PHOTO_{index} Do", "Q",
             ]
