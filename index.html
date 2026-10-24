@@ -136,8 +136,14 @@
     .summary-photo-preview { min-width:0; }
     .summary-photo-preview > span { display:block; margin-bottom:8px; color:var(--muted); font-size:.76rem; text-transform:uppercase; letter-spacing:.08em; }
     .photo-frame { display:grid; place-items:center; min-height:250px; overflow:hidden; border:1px dashed var(--line); background:rgba(255,255,255,.42); color:var(--muted); }
+    .photo-frame.photo-gallery { grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; padding:8px; align-content:stretch; }
     .photo-frame img { display:block; width:100%; height:250px; object-fit:cover; }
+    .photo-frame.photo-gallery img { height:234px; min-width:0; cursor:zoom-in; }
     .photo-frame strong { padding:20px; font:500 .95rem 'Space Grotesk',sans-serif; }
+    .photo-hover-preview { position:fixed; inset:0; z-index:80; display:grid; place-items:center; padding:8vh 8vw; background:rgba(24,33,31,.72); opacity:0; visibility:hidden; pointer-events:none; transition:opacity .45s ease, visibility 0s linear .45s; }
+    .photo-hover-preview.is-visible { opacity:1; visibility:visible; transition-delay:0s; }
+    .photo-hover-preview img { display:block; max-width:84vw; max-height:84vh; width:auto; height:auto; object-fit:contain; border:8px solid #fff; background:#fff; box-shadow:0 24px 70px rgba(0,0,0,.3); opacity:0; transform:scale(.96); transition:opacity .45s ease, transform .45s ease; }
+    .photo-hover-preview.is-visible img { opacity:1; transform:scale(1); }
     .human-verification { max-width:760px; margin-top:30px; padding:24px; border:1px solid var(--line); background:rgba(255,255,255,.72); }
     .human-verification h4 { margin:4px 0 8px; color:var(--ink); font:700 clamp(1.35rem,2.8vw,2rem)/1 'Space Grotesk',sans-serif; letter-spacing:-.04em; }
     .human-verification p { margin:0 0 18px; color:var(--muted); font-size:.9rem; }
@@ -229,7 +235,7 @@
           <div class="detail-fields">
             <label><span id="detail-object-label">Objet ou équipement</span><input id="detail-object" type="text" placeholder="Ex. lave-linge, ordinateur, meuble…"></label>
             <label><span>Votre description</span><textarea id="detail-description" rows="4" placeholder="Décrivez ce qui se passe ou ce qu’il faut réparer…"></textarea></label>
-            <label class="photo-upload-field"><span>Photo facultative</span><span class="photo-upload"><span class="photo-upload-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7.5A2.5 2.5 0 0 1 6.5 5H9l1.5-2h3L15 5h2.5A2.5 2.5 0 0 1 20 7.5v9A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5v-9Z"/><circle cx="12" cy="12" r="3.2"/><path d="M18 8h.01"/></svg></span><span class="photo-upload-copy"><strong>Ajouter une photo</strong><small>Facultatif · JPG, PNG ou autre image</small></span><input id="detail-photo" type="file" accept="image/*"></span><span class="photo-upload-name" id="photo-file-name" aria-live="polite"></span></label>
+            <label class="photo-upload-field"><span>Photos facultatives</span><span class="photo-upload"><span class="photo-upload-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7.5A2.5 2.5 0 0 1 6.5 5H9l1.5-2h3L15 5h2.5A2.5 2.5 0 0 1 20 7.5v9A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5v-9Z"/><circle cx="12" cy="12" r="3.2"/><path d="M18 8h.01"/></svg></span><span class="photo-upload-copy"><strong>Ajouter jusqu’à 3 photos</strong><small>Facultatif · JPG, PNG ou autre image</small></span><input id="detail-photo" type="file" accept="image/*" multiple></span><span class="photo-upload-name" id="photo-file-name" aria-live="polite"></span></label>
           </div>
           <div class="service-footer"><button class="service-back" id="detail-back" type="button">← Modifier mon besoin</button><button class="detail-next" id="detail-next" type="button">Continuer →</button></div>
           <div class="detail-feedback" id="detail-feedback" aria-live="polite"></div>
@@ -271,7 +277,8 @@
           </div>
           <aside class="summary-photo-preview" aria-label="Aperçu de la photo jointe">
             <span>Photo jointe</span>
-            <div class="photo-frame"><img id="summary-photo-image" alt="Aperçu de la photo sélectionnée" hidden><strong id="summary-photo-empty">Aucune photo</strong></div>
+            <div class="photo-frame photo-gallery" id="summary-photo-gallery"><strong id="summary-photo-empty">Aucune photo</strong></div>
+            <div class="photo-hover-preview" id="photo-hover-preview" aria-hidden="true"><img id="photo-hover-image" alt="Aperçu agrandi de la photo"></div>
           </aside>
           </div>
           <div class="service-footer"><button class="service-back" id="summary-back" type="button">← Modifier le lieu</button><button class="detail-next" id="summary-confirm" type="button">Confirmer le récapitulatif →</button></div>

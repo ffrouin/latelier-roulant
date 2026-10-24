@@ -462,6 +462,9 @@ const detailObject = document.querySelector('#detail-object');
 const detailDescription = document.querySelector('#detail-description');
 const detailPhoto = document.querySelector('#detail-photo');
 const photoFileName = document.querySelector('#photo-file-name');
+const photoGallery = document.querySelector('#summary-photo-gallery');
+const photoHoverPreview = document.querySelector('#photo-hover-preview');
+const photoHoverImage = document.querySelector('#photo-hover-image');
 const detailFeedback = document.querySelector('#detail-feedback');
 const serviceLocation = document.querySelector('#service-location');
 const locationFeedback = document.querySelector('#location-feedback');
@@ -683,8 +686,29 @@ function lookupAddress() {
 }
 [locationAddress, locationPostcode, locationTown].forEach((input) => input.addEventListener('input', lookupAddress));
 detailPhoto.addEventListener('change', () => {
-  const file = detailPhoto.files[0];
-  photoFileName.textContent = file ? `Photo sélectionnée : ${file.name}` : '';
+  const files = [...detailPhoto.files];
+  if (files.length > 3) {
+    detailPhoto.value = '';
+    photoFileName.textContent = '';
+    detailFeedback.textContent = 'Vous pouvez joindre au maximum 3 photos.';
+    return;
+  }
+  detailFeedback.textContent = '';
+  photoFileName.textContent = files.length ? `${files.length} photo${files.length > 1 ? 's' : ''} sélectionnée${files.length > 1 ? 's' : ''} : ${files.map(file => file.name).join(', ')}` : '';
+});
+photoGallery.addEventListener('mouseover', (event) => {
+  if (!(event.target instanceof HTMLImageElement)) return;
+  photoHoverImage.src = event.target.src;
+  photoHoverImage.alt = event.target.alt;
+  photoHoverPreview.classList.add('is-visible');
+  photoHoverPreview.setAttribute('aria-hidden', 'false');
+});
+photoGallery.addEventListener('mouseout', (event) => {
+  const relatedImage = event.relatedTarget instanceof HTMLImageElement ? event.relatedTarget : null;
+  if (!(event.target instanceof HTMLImageElement) || (relatedImage && photoGallery.contains(relatedImage))) return;
+  photoHoverPreview.classList.remove('is-visible');
+  photoHoverPreview.setAttribute('aria-hidden', 'true');
+  photoHoverImage.removeAttribute('src');
 });
 document.addEventListener('click', (event) => {
   if (!event.target.closest('.address-lookup')) closeAddressSuggestions();
@@ -706,23 +730,29 @@ document.querySelector('#location-next').addEventListener('click', () => {
   const address = locationAddress.value.trim();
   const postcode = locationPostcode.value.trim();
   const access = document.querySelector('#location-access').value.trim();
-  const photo = document.querySelector('#detail-photo').files[0]?.name;
+  const photoFiles = [...document.querySelector('#detail-photo').files];
+  const photoNames = photoFiles.map(file => file.name);
   document.querySelector('#summary-location').textContent = [address, postcode, town].filter(Boolean).join(', ');
   document.querySelector('#summary-access').textContent = access || 'Aucune précision';
   document.querySelector('#summary-availability').textContent = availability;
   document.querySelector('#summary-urgency').textContent = document.querySelector('#location-urgency').value || 'Non précisée';
-  document.querySelector('#summary-photo').textContent = photo || 'Aucune photo ajoutée';
+  document.querySelector('#summary-photo').textContent = photoNames.length ? `${photoNames.length} photo${photoNames.length > 1 ? 's' : ''} : ${photoNames.join(', ')}` : 'Aucune photo ajoutée';
   document.querySelector('#summary-name').textContent = `${firstname} ${lastname}`;
   document.querySelector('#summary-phone').textContent = phone;
-  const photoImage = document.querySelector('#summary-photo-image');
   const photoEmpty = document.querySelector('#summary-photo-empty');
-  if (document.querySelector('#detail-photo').files[0]) {
-    photoImage.src = URL.createObjectURL(document.querySelector('#detail-photo').files[0]);
-    photoImage.hidden = false;
+  photoGallery.querySelectorAll('img').forEach((image) => {
+    if (image.src.startsWith('blob:')) URL.revokeObjectURL(image.src);
+    image.remove();
+  });
+  if (photoFiles.length) {
+    photoFiles.forEach((file, index) => {
+      const image = document.createElement('img');
+      image.src = URL.createObjectURL(file);
+      image.alt = `Aperçu de la photo ${index + 1}`;
+      photoGallery.insertBefore(image, photoEmpty);
+    });
     photoEmpty.hidden = true;
   } else {
-    photoImage.removeAttribute('src');
-    photoImage.hidden = true;
     photoEmpty.hidden = false;
   }
   summaryFeedback.textContent = '';
@@ -760,9 +790,10 @@ humanTarget.addEventListener('click', () => {
   }
   moveHumanTarget();
 });
-function preparePhotoData(file) {
-  if (!file) return Promise.resolve('');
-  return new Promise((resolve, reject) => {
+function preparePhotoData(files) {
+  const selectedFiles = [...(files || [])].slice(0, 3);
+  if (!selectedFiles.length) return Promise.resolve([]);
+  return Promise.all(selectedFiles.map((file) => new Promise((resolve, reject) => {
     const objectUrl = URL.createObjectURL(file);
     const image = new Image();
     image.onload = () => {
@@ -777,20 +808,20 @@ function preparePhotoData(file) {
     };
     image.onerror = () => {
       URL.revokeObjectURL(objectUrl);
-      reject(new Error('La photo sélectionnée ne peut pas être préparée.'));
+      reject(new Error('Une des photos sélectionnées ne peut pas être préparée.'));
     };
     image.src = objectUrl;
-  });
+  })));
 }
 humanContinue.addEventListener('click', async () => {
   if (humanGameRound < 3) return;
   humanContinue.disabled = true;
   humanContinue.textContent = 'Génération et envoi en cours…';
   humanFeedback.textContent = 'Préparation du PDF et envoi du courriel…';
-  const photoFile = document.querySelector('#detail-photo').files[0];
-  let photoData = '';
+  const photoFiles = [...document.querySelector('#detail-photo').files];
+  let photoData = [];
   try {
-    photoData = await preparePhotoData(photoFile);
+    photoData = await preparePhotoData(photoFiles);
   } catch (error) {
     humanContinue.disabled = false;
     humanContinue.textContent = 'Réessayer l’envoi →';
@@ -810,7 +841,7 @@ humanContinue.addEventListener('click', async () => {
     lastname: document.querySelector('#contact-lastname').value.trim(),
     firstname: document.querySelector('#contact-firstname').value.trim(),
     phone: document.querySelector('#contact-phone').value.trim(),
-    photo_name: photoFile?.name || '',
+    photo_name: photoFiles.map(file => file.name),
     photo_data: photoData,
     human_confirmed: true,
   };

@@ -298,6 +298,18 @@ def qr_png(url):
     return result.stdout
 
 
+def decode_photos(value):
+    values = value if isinstance(value, list) else ([value] if value else [])
+    if len(values) > 3:
+        raise ValueError("Trois photos maximum par demande")
+    photos = []
+    for item in values:
+        photo = decode_photo(item)
+        if photo:
+            photos.append(photo)
+    return photos
+
+
 def decode_photo(data_url):
     if not data_url:
         return None
@@ -426,11 +438,12 @@ def make_pdf(data, document_url):
     qr_ref, qr_width, qr_height = add_rgb_image(objects, qr_png(document_url), "QR")
     image_refs["QR"] = qr_ref
 
-    photo_bytes = decode_photo(data.get("photo_data"))
-    photo_width = photo_height = 0
-    if photo_bytes:
-        photo_ref, photo_width, photo_height = add_rgb_image(objects, photo_bytes, "PHOTO")
-        image_refs["PHOTO"] = photo_ref
+    photo_bytes_list = decode_photos(data.get("photo_data"))
+    photo_dimensions = []
+    for index, photo_bytes in enumerate(photo_bytes_list, start=1):
+        photo_ref, photo_width, photo_height = add_rgb_image(objects, photo_bytes, f"PHOTO_{index}")
+        image_refs[f"PHOTO_{index}"] = photo_ref
+        photo_dimensions.append((photo_width, photo_height))
 
     # Follow-up cartouche directly after the request.
     commands += [
@@ -441,19 +454,21 @@ def make_pdf(data, document_url):
     ]
 
     # Only render the photo block when a photo was actually supplied.
-    if "PHOTO" in image_refs:
+    if photo_dimensions:
         commands += [
-            "BT", "/F1 6 Tf", fill(orange), "55 265 Td", pdf_text("PHOTO JOINTE"), "ET",
+            "BT", "/F1 6 Tf", fill(orange), "55 265 Td", pdf_text("PHOTOS JOINTES"), "ET",
         ]
-        max_width, max_height = 475, 90
-        photo_scale = min(max_width / photo_width, max_height / photo_height)
-        drawn_width = photo_width * photo_scale
-        drawn_height = photo_height * photo_scale
-        photo_x = 55 + (max_width - drawn_width) / 2
-        photo_y = 65 + (max_height - drawn_height) / 2
-        commands += [
-            "q", f"{drawn_width:.3f} 0 0 {drawn_height:.3f} {photo_x:.3f} {photo_y:.3f} cm", "/PHOTO Do", "Q",
-        ]
+        max_width, max_height, gap = 475, 90, 8
+        tile_width = (max_width - gap * (len(photo_dimensions) - 1)) / len(photo_dimensions)
+        for index, (photo_width, photo_height) in enumerate(photo_dimensions, start=1):
+            photo_scale = min(tile_width / photo_width, max_height / photo_height)
+            drawn_width = photo_width * photo_scale
+            drawn_height = photo_height * photo_scale
+            photo_x = 55 + (index - 1) * (tile_width + gap) + (tile_width - drawn_width) / 2
+            photo_y = 65 + (max_height - drawn_height) / 2
+            commands += [
+                "q", f"{drawn_width:.3f} 0 0 {drawn_height:.3f} {photo_x:.3f} {photo_y:.3f} cm", f"/PHOTO_{index} Do", "Q",
+            ]
 
     qr_size = 37.5
     qr_x, qr_y = 500, 20
