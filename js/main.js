@@ -472,7 +472,7 @@ const serviceSummary = document.querySelector('#service-summary');
 const summaryFeedback = document.querySelector('#summary-feedback');
 const humanVerification = document.querySelector('#human-verification');
 const humanGame = document.querySelector('#human-game');
-const humanTarget = document.querySelector('#human-target');
+const humanBalls = [...humanGame.querySelectorAll('.human-ball')];
 const humanGameStatus = document.querySelector('#human-game-status');
 const humanContinue = document.querySelector('#human-continue');
 const humanFeedback = document.querySelector('#human-feedback');
@@ -486,6 +486,8 @@ const locationAddress = document.querySelector('#location-address');
 const addressSuggestions = document.querySelector('#location-address-suggestions');
 const addressStatus = document.querySelector('#location-address-status');
 let humanGameRound = 0;
+let humanGameSequenceIndex = 0;
+const humanGameSequence = ['blue', 'white', 'red'];
 let stepTransitionInProgress = false;
 let addressLookupTimer;
 let addressLookupController;
@@ -526,19 +528,22 @@ function transitionForward(update) {
     }, 380);
   }, 260);
 }
-function moveHumanTarget() {
-  const maxX = Math.max(8, humanGame.clientWidth - 42);
-  const maxY = Math.max(8, humanGame.clientHeight - 42);
-  humanTarget.style.left = `${8 + Math.random() * (maxX - 8)}px`;
-  humanTarget.style.top = `${8 + Math.random() * (maxY - 8)}px`;
+function moveHumanBalls() {
+  const maxX = Math.max(8, humanGame.clientWidth - 50);
+  const maxY = Math.max(8, humanGame.clientHeight - 50);
+  humanBalls.forEach((ball) => {
+    ball.style.left = `${8 + Math.random() * Math.max(0, maxX - 8)}px`;
+    ball.style.top = `${8 + Math.random() * Math.max(0, maxY - 8)}px`;
+  });
 }
 function resetHumanGame() {
   humanGameRound = 0;
+  humanGameSequenceIndex = 0;
   humanGameStatus.textContent = '0 / 3';
-  humanTarget.disabled = false;
+  humanBalls.forEach((ball) => { ball.disabled = false; });
   humanContinue.disabled = true;
   humanFeedback.textContent = '';
-  moveHumanTarget();
+  moveHumanBalls();
 }
 const detailCopy = {
   'Électroménager': ['Quel appareil souhaitez-vous faire réparer ?', 'Indiquez l’appareil concerné et décrivez la panne constatée.', 'Appareil ou équipement', 'Ex. lave-linge, four, réfrigérateur…'],
@@ -777,18 +782,30 @@ document.querySelector('#summary-confirm').addEventListener('click', () => {
   updateProcessProgress(80, 'Vérification finale');
   humanVerification.hidden = false;
   resetHumanGame();
-  humanTarget.focus();
+  humanGame.focus();
 });
-humanTarget.addEventListener('click', () => {
-  humanGameRound += 1;
-  humanGameStatus.textContent = `${humanGameRound} / 3`;
-  if (humanGameRound >= 3) {
-    humanTarget.disabled = true;
-    humanContinue.disabled = false;
-    humanFeedback.textContent = 'Bien joué. Vous pouvez continuer.';
-    return;
-  }
-  moveHumanTarget();
+humanBalls.forEach((ball) => {
+  ball.addEventListener('click', () => {
+    if (humanGameSequenceIndex >= humanGameSequence.length) return;
+    const color = ball.dataset.ballColor;
+    moveHumanBalls();
+    if (color === humanGameSequence[humanGameSequenceIndex]) {
+      humanGameSequenceIndex += 1;
+      humanGameRound = humanGameSequenceIndex;
+      humanGameStatus.textContent = `${humanGameRound} / 3`;
+      humanFeedback.textContent = '';
+      if (humanGameSequenceIndex === humanGameSequence.length) {
+        humanBalls.forEach((item) => { item.disabled = true; });
+        humanContinue.disabled = false;
+        humanFeedback.textContent = 'Vérification validée. Vous pouvez continuer.';
+      }
+      return;
+    }
+    humanGameSequenceIndex = 0;
+    humanGameRound = 0;
+    humanGameStatus.textContent = '0 / 3';
+    humanFeedback.textContent = 'Vérification non validée. Recommencez.';
+  });
 });
 function preparePhotoData(files) {
   const selectedFiles = [...(files || [])].slice(0, 3);
