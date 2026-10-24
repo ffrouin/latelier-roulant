@@ -107,6 +107,16 @@
     .location-fields .field-full { grid-column:1 / -1; }
     .detail-fields input, .detail-fields textarea, .detail-fields select { width:100%; border:1px solid var(--line); border-radius:0; padding:13px 14px; color:var(--ink); background:#fff; font:400 .95rem 'DM Sans',sans-serif; resize:vertical; }
     .detail-fields input:focus, .detail-fields textarea:focus { outline:2px solid var(--accent); outline-offset:2px; }
+    .photo-upload-field { gap:8px !important; }
+    .photo-upload { position:relative; display:flex; align-items:center; gap:14px; min-height:82px; padding:16px 18px; border:1px dashed var(--accent); background:#fffaf3; color:var(--ink); cursor:pointer; transition:background .2s ease, border-color .2s ease, transform .2s ease; }
+    .photo-upload:hover, .photo-upload:focus-within { border-color:var(--ink); background:#fff; transform:translateY(-2px); }
+    .photo-upload input { position:absolute; inset:0; width:100%; height:100%; padding:0; opacity:0; cursor:pointer; }
+    .photo-upload-icon { display:grid; place-items:center; flex:0 0 42px; width:42px; height:42px; border-radius:50%; color:#fff; background:var(--accent); }
+    .photo-upload-icon svg { width:23px; height:23px; fill:none; stroke:currentColor; stroke-linecap:round; stroke-linejoin:round; stroke-width:1.8; }
+    .photo-upload-copy { display:grid; gap:4px; }
+    .photo-upload-copy strong { font:600 1rem 'Space Grotesk',sans-serif; }
+    .photo-upload-copy small { color:var(--muted); font-size:.76rem; font-weight:400; }
+    .photo-upload-name { min-height:18px; color:var(--accent); font-size:.78rem; font-weight:500; }
     .address-lookup { position:relative; }
     .address-suggestions { position:absolute; z-index:5; top:calc(100% + 4px); left:0; right:0; display:grid; gap:2px; padding:5px; border:1px solid var(--line); background:#fff; box-shadow:0 8px 24px rgba(24,33,31,.12); }
     .address-suggestions[hidden] { display:none; }
@@ -219,7 +229,7 @@
           <div class="detail-fields">
             <label><span id="detail-object-label">Objet ou équipement</span><input id="detail-object" type="text" placeholder="Ex. lave-linge, ordinateur, meuble…"></label>
             <label><span>Votre description</span><textarea id="detail-description" rows="4" placeholder="Décrivez ce qui se passe ou ce qu’il faut réparer…"></textarea></label>
-            <label><span>Photo facultative</span><input id="detail-photo" type="file" accept="image/*"></label>
+            <label class="photo-upload-field"><span>Photo facultative</span><span class="photo-upload"><span class="photo-upload-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7.5A2.5 2.5 0 0 1 6.5 5H9l1.5-2h3L15 5h2.5A2.5 2.5 0 0 1 20 7.5v9A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5v-9Z"/><circle cx="12" cy="12" r="3.2"/><path d="M18 8h.01"/></svg></span><span class="photo-upload-copy"><strong>Ajouter une photo</strong><small>Facultatif · JPG, PNG ou autre image</small></span><input id="detail-photo" type="file" accept="image/*"></span><span class="photo-upload-name" id="photo-file-name" aria-live="polite"></span></label>
           </div>
           <div class="service-footer"><button class="service-back" id="detail-back" type="button">← Modifier mon besoin</button><button class="detail-next" id="detail-next" type="button">Continuer →</button></div>
           <div class="detail-feedback" id="detail-feedback" aria-live="polite"></div>

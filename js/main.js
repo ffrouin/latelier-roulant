@@ -460,6 +460,8 @@ const detailIntro = document.querySelector('#detail-intro');
 const detailObjectLabel = document.querySelector('#detail-object-label');
 const detailObject = document.querySelector('#detail-object');
 const detailDescription = document.querySelector('#detail-description');
+const detailPhoto = document.querySelector('#detail-photo');
+const photoFileName = document.querySelector('#photo-file-name');
 const detailFeedback = document.querySelector('#detail-feedback');
 const serviceLocation = document.querySelector('#service-location');
 const locationFeedback = document.querySelector('#location-feedback');
@@ -680,6 +682,10 @@ function lookupAddress() {
   }, 450);
 }
 [locationAddress, locationPostcode, locationTown].forEach((input) => input.addEventListener('input', lookupAddress));
+detailPhoto.addEventListener('change', () => {
+  const file = detailPhoto.files[0];
+  photoFileName.textContent = file ? `Photo sélectionnée : ${file.name}` : '';
+});
 document.addEventListener('click', (event) => {
   if (!event.target.closest('.address-lookup')) closeAddressSuggestions();
 });
