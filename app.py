@@ -140,6 +140,7 @@ IP_EVENTS = defaultdict(deque)
 THREAT_HISTORY = {}
 WEB_STATS_STORAGE_PATH = Path(environ.get("WEB_STATS_STORAGE_PATH", str(ROOT / ".web-stats.json")))
 WEB_STATS_PERSIST_INTERVAL_SECONDS = 2
+WEB_STATS_PERSIST_LOCK = threading.Lock()
 LAST_WEB_STATS_PERSIST_AT = 0.0
 IP_THREAT_WINDOW_SECONDS = 300
 IP_EVENT_MAX = 120
@@ -177,32 +178,24 @@ def _stats_payload_locked():
 def persist_web_stats(force=False):
     """Persist dashboard counters atomically without blocking every request on disk I/O."""
     global LAST_WEB_STATS_PERSIST_AT
-    now = time.time()
-    if not force and now - LAST_WEB_STATS_PERSIST_AT < WEB_STATS_PERSIST_INTERVAL_SECONDS:
-        return
-    with WEB_STATS_LOCK:
-        payload = _stats_payload_locked()
-    temporary_path = None
-    try:
-        WEB_STATS_STORAGE_PATH.parent.mkdir(parents=True, exist_ok=True)
-        with tempfile.NamedTemporaryFile(
-            mode="w",
-            encoding="utf-8",
-            dir=WEB_STATS_STORAGE_PATH.parent,
-            prefix=f".{WEB_STATS_STORAGE_PATH.name}.",
-            suffix=".tmp",
-            delete=False,
-        ) as temporary:
-            json.dump(payload, temporary, ensure_ascii=False, separators=(",", ":"))
-            temporary.flush()
-            os.fsync(temporary.fileno())
-            temporary_path = Path(temporary.name)
-        os.replace(temporary_path, WEB_STATS_STORAGE_PATH)
-        LAST_WEB_STATS_PERSIST_AT = now
-    except OSError:
-        if temporary_path:
+    with WEB_STATS_PERSIST_LOCK:
+        now = time.time()
+        if not force and now - LAST_WEB_STATS_PERSIST_AT < WEB_STATS_PERSIST_INTERVAL_SECONDS:
+            return
+        with WEB_STATS_LOCK:
+            payload = _stats_payload_locked()
+        temporary_path = WEB_STATS_STORAGE_PATH.with_name(f"{WEB_STATS_STORAGE_PATH.name}.tmp")
+        try:
+            WEB_STATS_STORAGE_PATH.parent.mkdir(parents=True, exist_ok=True)
+            with temporary_path.open("w", encoding="utf-8") as temporary:
+                json.dump(payload, temporary, ensure_ascii=False, separators=(",", ":"))
+                temporary.flush()
+                os.fsync(temporary.fileno())
+            os.replace(temporary_path, WEB_STATS_STORAGE_PATH)
+            LAST_WEB_STATS_PERSIST_AT = now
+        except OSError:
             temporary_path.unlink(missing_ok=True)
-        LOGGER.exception("Impossible de persister les statistiques web: %s", WEB_STATS_STORAGE_PATH)
+            LOGGER.exception("Impossible de persister les statistiques web: %s", WEB_STATS_STORAGE_PATH)
 
 
 def load_persisted_web_stats():
