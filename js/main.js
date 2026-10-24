@@ -175,7 +175,6 @@ mairieRoof.rotation.y = Math.PI / 4;
 mairieRoof.position.set(-3.25, 1.93, -2.75);
 mairieRoof.castShadow = true;
 scene.add(mairieRoof);
-worldBox([0.28, 0.85, 0.05], [-3.25, 1.22, -3.55], darkGlass);
 worldBox([0.28, 0.85, 0.05], [-3.25, 1.22, -1.95], darkGlass);
 
 // Drapeau français et enseigne de la mairie.
@@ -217,16 +216,14 @@ steeple.position.set(2.05, 3.78, -2.72);
 steeple.castShadow = true;
 scene.add(steeple);
 worldBox([0.22, 0.85, 0.05], [2.05, 1.45, -3.12], darkGlass);
-worldBox([0.18, 1.0, 0.08], [2.05, 4.55, -2.72], roof);
-worldBox([0.8, 0.12, 0.08], [2.05, 4.55, -2.72], roof);
 
 // Portes, bancs et massifs fleuris donnent vie aux abords des bâtiments.
 const wood = mat(0x8a5b3c);
 const door = mat(0x394847, 0.55);
 worldBox([0.9, 1.25, 0.05], [-3.25, 0.72, -3.56], stone);
 worldBox([0.62, 1.0, 0.06], [-3.25, 0.62, -3.6], door);
-worldBox([0.75, 1.18, 0.05], [3.0, 0.7, -3.53], stone);
-worldBox([0.5, 0.9, 0.06], [3.0, 0.58, -3.57], door);
+worldBox([0.05, 1.18, 0.75], [1.68, 0.72, -2.72], stone);
+worldBox([0.06, 0.9, 0.5], [1.64, 0.6, -2.72], door);
 
 function addBench(x, z, rotation = 0) {
   const bench = new THREE.Group();
