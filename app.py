@@ -568,7 +568,7 @@ def make_management_page(reference, history):
     y = 489
     for entry in entries:
         line = f"{entry['date']} — {entry['status']} — {entry['observation']}"
-        commands.extend(["BT", "/F1 6 Tf", fill(muted), f"62 {y} Td", pdf_text(wrap_lines(line, 112)[0][:150]), "ET"])
+        commands.extend(["BT", "/F1 6 Tf", fill(muted), f"285 {y} Td", pdf_text(wrap_lines(line, 58)[0][:90]), "ET"])
         y -= 10
         if y < 214:
             break
