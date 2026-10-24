@@ -340,9 +340,6 @@ def make_pdf(data, document_url):
     def fill(color):
         return f"{color[0]} {color[1]} {color[2]} rg"
 
-    def stroke(color):
-        return f"{color[0]} {color[1]} {color[2]} RG"
-
     def lower_semicircle(cx, cy, radius):
         k = radius * 0.5522848
         return (
@@ -379,40 +376,44 @@ def make_pdf(data, document_url):
         circle(408, 829, 1.5) + " f", circle(415, 826, 1.5) + " f", circle(422, 829, 1.5) + " f",
         "BT", "/F1 24 Tf", fill(ink), "55 810 Td", pdf_text(LEGAL_BUSINESS_NAME.upper()), "ET",
         "BT", "/F1 10 Tf", fill(orange), "55 790 Td", pdf_text("Réparer plutôt que remplacer"), "ET",
-        "BT", "/F1 10 Tf", fill(ink), "455 815 Td", pdf_text(LEGAL_CONTACT_NAME or LEGAL_BUSINESS_NAME), "ET",
-        "BT", "/F1 9 Tf", fill(orange), "455 798 Td", pdf_text(LEGAL_EMAIL), "ET",
+        "BT", "/F1 10 Tf", fill(ink), "460 815 Td", pdf_text(LEGAL_CONTACT_NAME or LEGAL_BUSINESS_NAME), "ET",
+        "BT", "/F1 8 Tf", fill(orange), "460 800 Td", pdf_text(LEGAL_PHONE), "ET",
+        "BT", "/F1 8 Tf", fill(orange), "460 785 Td", pdf_text(LEGAL_EMAIL), "ET",
         "Q",
     ]
 
-    # Customer details: intentionally no heading, as requested.
+    # Customer cartouche, moved directly below the header.
     commands += [
-        "BT", "/F1 15 Tf", fill(ink), "62 720 Td", pdf_text(f"{data['firstname']} {data['lastname']}"), "ET",
-        "BT", "/F1 11 Tf", fill(ink), "62 697 Td", pdf_text(data["phone"]), "ET",
-        "BT", "/F1 10 Tf", fill(muted), "285 720 Td", pdf_text(data.get("location") or "Lieu non précisé"), "ET",
-        "BT", "/F1 10 Tf", fill(muted), "285 697 Td", pdf_text(data.get("access") or "Accès non précisé"), "ET",
-        "BT", "/F1 18 Tf", fill(orange), "45 645 Td", pdf_text("Votre demande"), "ET",
+        "BT", "/F1 13 Tf", fill(ink), "62 722 Td", pdf_text(f"{data['firstname']} {data['lastname']}"), "ET",
+        "BT", "/F1 9 Tf", fill(ink), "62 705 Td", pdf_text(data["phone"]), "ET",
+        "BT", "/F1 9 Tf", fill(muted), "285 722 Td", pdf_text(data.get("location") or "Lieu non précisé"), "ET",
+        "BT", "/F1 9 Tf", fill(muted), "285 705 Td", pdf_text(data.get("access") or "Accès non précisé"), "ET",
+    ]
+
+    # Request cartouche, with text reduced by approximately 40%.
+    commands += [
     ]
 
     def append_request_field(x, y, label, value, width):
-        commands.extend(["BT", "/F1 9 Tf", fill(orange), f"{x} {y} Td", pdf_text(label.upper()), "ET"])
-        y -= 14
+        commands.extend(["BT", "/F1 6 Tf", fill(orange), f"{x} {y} Td", pdf_text(label.upper()), "ET"])
+        y -= 10
         lines = wrap_lines(value, width)
-        commands.extend(["BT", "/F1 11 Tf", fill(ink), f"{x} {y} Td", pdf_text(lines[0]), "ET"])
-        y -= 16
+        commands.extend(["BT", "/F1 7 Tf", fill(ink), f"{x} {y} Td", pdf_text(lines[0]), "ET"])
+        y -= 11
         for line in lines[1:3]:
-            commands.extend(["BT", "/F1 10 Tf", fill(ink), f"{x + 10} {y} Td", pdf_text(line), "ET"])
-            y -= 14
-        return y - 6
+            commands.extend(["BT", "/F1 7 Tf", fill(ink), f"{x + 8} {y} Td", pdf_text(line), "ET"])
+            y -= 10
+        return y - 4
 
-    append_request_field(55, 616, "DATE", data.get("created_at", "Date non précisée"), 55)
-    left_y = 576
-    left_y = append_request_field(55, left_y, "Besoin", data.get("service"), 38)
-    left_y = append_request_field(55, left_y, "Objet ou équipement", data.get("object"), 38)
-    append_request_field(55, left_y, "Description", data.get("description"), 38)
+    append_request_field(62, 655, "DATE", data.get("created_at", "Date non précisée"), 55)
+    left_y = 625
+    left_y = append_request_field(62, left_y, "Besoin", data.get("service"), 38)
+    left_y = append_request_field(62, left_y, "Objet ou équipement", data.get("object"), 38)
+    append_request_field(62, left_y, "Description", data.get("description"), 38)
 
-    right_y = 576
-    right_y = append_request_field(330, right_y, "Disponibilité", data.get("availability"), 28)
-    append_request_field(330, right_y, "Urgence", data.get("urgency"), 28)
+    right_y = 625
+    right_y = append_request_field(285, right_y, "Disponibilité", data.get("availability"), 28)
+    append_request_field(285, right_y, "Urgence", data.get("urgency"), 28)
 
     objects = [
         b"<< /Type /Catalog /Pages 2 0 R >>",
@@ -431,27 +432,33 @@ def make_pdf(data, document_url):
         photo_ref, photo_width, photo_height = add_rgb_image(objects, photo_bytes, "PHOTO")
         image_refs["PHOTO"] = photo_ref
 
-    # Photo below the request, using the full page width without distortion.
+    # Follow-up cartouche directly after the request.
     commands += [
-        "BT", "/F1 9 Tf", fill(orange), "55 380 Td", pdf_text("PHOTO JOINTE"), "ET",
+        "BT", "/F1 6 Tf", fill(orange), "62 517 Td", pdf_text("STATUT"), "ET",
+        "BT", "/F1 7 Tf", fill(ink), "62 506 Td", pdf_text("A traiter"), "ET",
+        "BT", "/F1 6 Tf", fill(orange), "285 517 Td", pdf_text("OBSERVATION"), "ET",
+        "BT", "/F1 7 Tf", fill(muted), "285 506 Td", pdf_text("Aucune observation"), "ET",
     ]
+
+    # Only render the photo block when a photo was actually supplied.
     if "PHOTO" in image_refs:
-        max_width, max_height = 475, 155
+        commands += [
+            "BT", "/F1 6 Tf", fill(orange), "55 265 Td", pdf_text("PHOTO JOINTE"), "ET",
+        ]
+        max_width, max_height = 475, 90
         photo_scale = min(max_width / photo_width, max_height / photo_height)
         drawn_width = photo_width * photo_scale
         drawn_height = photo_height * photo_scale
         photo_x = 55 + (max_width - drawn_width) / 2
-        photo_y = 210 + (max_height - drawn_height) / 2
+        photo_y = 65 + (max_height - drawn_height) / 2
         commands += [
             "q", f"{drawn_width:.3f} 0 0 {drawn_height:.3f} {photo_x:.3f} {photo_y:.3f} cm", "/PHOTO Do", "Q",
         ]
-    else:
-        commands += [
-            "BT", "/F1 11 Tf", fill(muted), "55 330 Td", pdf_text("Aucune photo"), "ET",
-        ]
 
+    qr_size = 37.5
+    qr_x, qr_y = 500, 20
     commands += [
-        "q", "75 0 0 75 440 80 cm", "/QR Do", "Q",
+        "q", f"{qr_size:g} 0 0 {qr_size:g} {qr_x:g} {qr_y:g} cm", "/QR Do", "Q",
     ]
     legal_text = " - ".join(
         value for value in (
@@ -464,8 +471,8 @@ def make_pdf(data, document_url):
     )
     legal_x = (595 - len(legal_text) * 7 * 0.48) / 2
     commands += [
-        "BT", "/F1 9 Tf", fill(muted), "55 42 Td", pdf_text(f"Référence : {data['request_id']}"), "ET",
-        "BT", "/F1 7 Tf", fill(muted), f"{legal_x:.1f} 22 Td", pdf_text(legal_text), "ET",
+        "BT", "/F1 9 Tf", fill(muted), "55 36 Td", pdf_text(f"Référence : {data['request_id']}"), "ET",
+        "BT", "/F1 7 Tf", fill(muted), f"{legal_x:.1f} 18 Td", pdf_text(legal_text), "ET",
     ]
     content = "\n".join(commands).encode("ascii")
 
@@ -476,7 +483,7 @@ def make_pdf(data, document_url):
     escaped_url = document_url.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
     annotation_ref = len(objects) + 1
     objects.append(
-        f"<< /Type /Annot /Subtype /Link /Rect [440 80 515 155] /Border [0 0 0] "
+        f"<< /Type /Annot /Subtype /Link /Rect [500 20 537.5 57.5] /Border [0 0 0] "
         f"/A << /S /URI /URI ({escaped_url}) >> >>".encode("ascii")
     )
     objects[2] = (
@@ -498,19 +505,21 @@ def make_management_page(reference, history):
         return f"{color[0]} {color[1]} {color[2]} rg"
 
     current = history[-1]
+    entries = history[-5:]
     commands = [
-        "BT", "/F1 10 Tf", fill(orange), "55 188 Td", pdf_text("SUIVI"), "ET",
-        "BT", "/F1 12 Tf", fill(ink), "95 188 Td", pdf_text(current["status"]), "ET",
+        "1 1 1 rg", "45 415 505 145 re f",
+        "BT", "/F1 6 Tf", fill(orange), "62 517 Td", pdf_text("STATUT"), "ET",
+        "BT", "/F1 7 Tf", fill(ink), "62 506 Td", pdf_text(current["status"]), "ET",
+        "BT", "/F1 6 Tf", fill(orange), "285 517 Td", pdf_text("HISTORIQUE"), "ET",
     ]
-    entries = history[-12:]
     if len(history) > len(entries):
-        commands.extend(["BT", "/F1 6 Tf", fill(muted), "55 176 Td", pdf_text(f"{len(history) - len(entries)} entrée(s) antérieure(s) non affichée(s)"), "ET"])
-    y = 176 if len(history) == len(entries) else 164
+        commands.extend(["BT", "/F1 6 Tf", fill(muted), "285 506 Td", pdf_text(f"{len(history) - len(entries)} entrée(s) antérieure(s) non affichée(s)"), "ET"])
+    y = 489
     for entry in entries:
         line = f"{entry['date']} — {entry['status']} — {entry['observation']}"
-        commands.extend(["BT", "/F1 6 Tf", fill(muted), f"55 {y} Td", pdf_text(wrap_lines(line, 112)[0][:150]), "ET"])
-        y -= 9
-        if y < 82:
+        commands.extend(["BT", "/F1 6 Tf", fill(muted), f"62 {y} Td", pdf_text(wrap_lines(line, 112)[0][:150]), "ET"])
+        y -= 10
+        if y < 214:
             break
     content = "\n".join(commands).encode("ascii")
     objects = [
@@ -620,7 +629,7 @@ def _pdf_management_history(text):
                     history.append({"status": status, "date": date, "observation": observation or "Aucune observation"})
             except (ValueError, IndexError):
                 continue
-        elif "SUIVI" in page:
+        else:
             lines = [line.strip() for line in page.splitlines() if line.strip()]
             for line in lines:
                 match = re.match(r"^(\d{2}/\d{2}/\d{4} à \d{2}:\d{2})\s+—\s+(.+?)\s+—\s+(.*)$", line)
