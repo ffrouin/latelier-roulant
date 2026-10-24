@@ -411,25 +411,25 @@ def make_pdf(data, document_url):
 
     commands = [
         "q",
-        fill(orange), "55 835 495 3 re f",
+        fill(orange), "55 807 495 3 re f",
         # Two recognizable truck-tire halves hang from the orange roof line.
         fill(ink),
-        lower_semicircle(330, 835, 20) + " f",
-        lower_semicircle(415, 835, 20) + " f",
+        lower_semicircle(330, 807, 20) + " f",
+        lower_semicircle(415, 807, 20) + " f",
         "0.67 0.69 0.68 rg",
-        lower_semicircle(330, 835, 13) + " f",
-        lower_semicircle(415, 835, 13) + " f",
+        lower_semicircle(330, 807, 13) + " f",
+        lower_semicircle(415, 807, 13) + " f",
         "0.09 0.13 0.12 rg",
-        lower_semicircle(330, 835, 7) + " f",
-        lower_semicircle(415, 835, 7) + " f",
+        lower_semicircle(330, 807, 7) + " f",
+        lower_semicircle(415, 807, 7) + " f",
         "0.82 0.83 0.80 rg",
-        circle(323, 829, 1.5) + " f", circle(330, 826, 1.5) + " f", circle(337, 829, 1.5) + " f",
-        circle(408, 829, 1.5) + " f", circle(415, 826, 1.5) + " f", circle(422, 829, 1.5) + " f",
-        "BT", "/F1 24 Tf", fill(ink), "55 810 Td", pdf_text(LEGAL_BUSINESS_NAME.upper()), "ET",
-        "BT", "/F1 10 Tf", fill(orange), "55 790 Td", pdf_text("Réparer plutôt que remplacer"), "ET",
-        "BT", "/F1 10 Tf", fill(ink), "460 815 Td", pdf_text(LEGAL_CONTACT_NAME or LEGAL_BUSINESS_NAME), "ET",
-        "BT", "/F1 8 Tf", fill(orange), "460 800 Td", pdf_text(LEGAL_PHONE), "ET",
-        "BT", "/F1 8 Tf", fill(orange), "460 785 Td", pdf_text(LEGAL_EMAIL), "ET",
+        circle(323, 801, 1.5) + " f", circle(330, 798, 1.5) + " f", circle(337, 801, 1.5) + " f",
+        circle(408, 801, 1.5) + " f", circle(415, 798, 1.5) + " f", circle(422, 801, 1.5) + " f",
+        "BT", "/F1 24 Tf", fill(ink), "55 782 Td", pdf_text(LEGAL_BUSINESS_NAME.upper()), "ET",
+        "BT", "/F1 10 Tf", fill(orange), "55 762 Td", pdf_text("Réparer plutôt que remplacer"), "ET",
+        "BT", "/F1 10 Tf", fill(ink), "460 787 Td", pdf_text(LEGAL_CONTACT_NAME or LEGAL_BUSINESS_NAME), "ET",
+        "BT", "/F1 8 Tf", fill(orange), "460 772 Td", pdf_text(LEGAL_PHONE), "ET",
+        "BT", "/F1 8 Tf", fill(orange), "460 757 Td", pdf_text(LEGAL_EMAIL), "ET",
         "Q",
     ]
 
@@ -565,7 +565,7 @@ def make_management_page(reference, history):
     ]
     if len(history) > len(entries):
         commands.extend(["BT", "/F1 6 Tf", fill(muted), "285 506 Td", pdf_text(f"{len(history) - len(entries)} entrée(s) antérieure(s) non affichée(s)"), "ET"])
-    y = 489
+    y = 506 if len(history) <= len(entries) else 496
     for entry in entries:
         line = f"{entry['date']} — {entry['status']} — {entry['observation']}"
         commands.extend(["BT", "/F1 6 Tf", fill(muted), f"285 {y} Td", pdf_text(wrap_lines(line, 58)[0][:90]), "ET"])

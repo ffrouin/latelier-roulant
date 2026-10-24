@@ -526,11 +526,36 @@ function transitionForward(update) {
   }, 260);
 }
 function moveHumanBalls() {
-  const maxX = Math.max(8, humanGame.clientWidth - 50);
-  const maxY = Math.max(8, humanGame.clientHeight - 50);
+  const size = 42;
+  const padding = 8;
+  const gap = 8;
+  const width = Math.max(humanGame.clientWidth, 320);
+  const height = Math.max(humanGame.clientHeight, 180);
+  const maxX = Math.max(padding, width - size - padding);
+  const maxY = Math.max(padding, height - size - padding);
+  const positions = [];
   humanBalls.forEach((ball) => {
-    ball.style.left = `${8 + Math.random() * Math.max(0, maxX - 8)}px`;
-    ball.style.top = `${8 + Math.random() * Math.max(0, maxY - 8)}px`;
+    let position = null;
+    for (let attempt = 0; attempt < 120 && !position; attempt += 1) {
+      const candidate = {
+        x: padding + Math.random() * Math.max(0, maxX - padding),
+        y: padding + Math.random() * Math.max(0, maxY - padding),
+      };
+      if (positions.every((other) => Math.hypot(candidate.x - other.x, candidate.y - other.y) >= size + gap)) {
+        position = candidate;
+      }
+    }
+    if (!position) {
+      const fallback = [
+        { x: padding, y: padding },
+        { x: maxX, y: padding },
+        { x: Math.max(padding, (width - size) / 2), y: maxY },
+      ];
+      position = fallback.find((candidate) => positions.every((other) => Math.hypot(candidate.x - other.x, candidate.y - other.y) >= size + gap)) || fallback[positions.length % fallback.length];
+    }
+    positions.push(position);
+    ball.style.left = `${position.x}px`;
+    ball.style.top = `${position.y}px`;
   });
 }
 function resetHumanGame() {
