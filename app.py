@@ -1,6 +1,7 @@
 """Serveur HTTP local pour L’Atelier Roulant."""
 
 import base64
+import copy
 from collections import defaultdict, deque
 from datetime import datetime
 import hmac
@@ -137,6 +138,9 @@ WEB_VISITORS = {}
 WEB_PATH_LAST_SEEN = {}
 IP_EVENTS = defaultdict(deque)
 THREAT_HISTORY = {}
+WEB_STATS_STORAGE_PATH = Path(environ.get("WEB_STATS_STORAGE_PATH", str(ROOT / ".web-stats.json")))
+WEB_STATS_PERSIST_INTERVAL_SECONDS = 2
+LAST_WEB_STATS_PERSIST_AT = 0.0
 IP_THREAT_WINDOW_SECONDS = 300
 IP_EVENT_MAX = 120
 WEB_404_RETENTION_SECONDS = 3600
@@ -150,6 +154,119 @@ GEOIP_DIAGNOSTICS = {
     "lookups": 0,
     "failures": 0,
 }
+
+
+
+
+def _stats_payload_locked():
+    return {
+        "version": 1,
+        "web_stats": copy.deepcopy(WEB_STATS),
+        "web_visitors": copy.deepcopy(WEB_VISITORS),
+        "web_path_last_seen": [
+            {"path": path, "status": status, "last_seen": timestamp}
+            for (path, status), timestamp in WEB_PATH_LAST_SEEN.items()
+        ],
+        "threat_history": [
+            {"ip": ip, "reason": reason, **copy.deepcopy(item)}
+            for (ip, reason), item in THREAT_HISTORY.items()
+        ],
+    }
+
+
+def persist_web_stats(force=False):
+    """Persist dashboard counters atomically without blocking every request on disk I/O."""
+    global LAST_WEB_STATS_PERSIST_AT
+    now = time.time()
+    if not force and now - LAST_WEB_STATS_PERSIST_AT < WEB_STATS_PERSIST_INTERVAL_SECONDS:
+        return
+    with WEB_STATS_LOCK:
+        payload = _stats_payload_locked()
+    temporary_path = None
+    try:
+        WEB_STATS_STORAGE_PATH.parent.mkdir(parents=True, exist_ok=True)
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            dir=WEB_STATS_STORAGE_PATH.parent,
+            prefix=f".{WEB_STATS_STORAGE_PATH.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as temporary:
+            json.dump(payload, temporary, ensure_ascii=False, separators=(",", ":"))
+            temporary.flush()
+            os.fsync(temporary.fileno())
+            temporary_path = Path(temporary.name)
+        os.replace(temporary_path, WEB_STATS_STORAGE_PATH)
+        LAST_WEB_STATS_PERSIST_AT = now
+    except OSError:
+        if temporary_path:
+            temporary_path.unlink(missing_ok=True)
+        LOGGER.exception("Impossible de persister les statistiques web: %s", WEB_STATS_STORAGE_PATH)
+
+
+def load_persisted_web_stats():
+    """Restore dashboard counters and threat history after a process restart."""
+    if not WEB_STATS_STORAGE_PATH.is_file():
+        LOGGER.info("Aucun historique web persistant: %s", WEB_STATS_STORAGE_PATH)
+        return
+    try:
+        payload = json.loads(WEB_STATS_STORAGE_PATH.read_text(encoding="utf-8"))
+        with WEB_STATS_LOCK:
+            stored_web = payload.get("web_stats", {})
+            for key in ("by_method", "by_path", "by_status", "by_path_status"):
+                if isinstance(stored_web.get(key), dict):
+                    WEB_STATS[key].update(stored_web[key])
+            for key in ("total_requests", "bytes_sent"):
+                if isinstance(stored_web.get(key), int):
+                    WEB_STATS[key] = stored_web[key]
+            if isinstance(payload.get("web_visitors"), dict):
+                WEB_VISITORS.update(payload["web_visitors"])
+            for item in payload.get("web_path_last_seen", []):
+                path, status, timestamp = item.get("path"), item.get("status"), item.get("last_seen")
+                if isinstance(path, str) and isinstance(status, str) and isinstance(timestamp, (int, float)):
+                    WEB_PATH_LAST_SEEN[(path, status)] = timestamp
+            for item in payload.get("threat_history", []):
+                ip, reason = item.get("ip"), item.get("reason")
+                if not isinstance(ip, str) or not isinstance(reason, str):
+                    continue
+                entry = {key: value for key, value in item.items() if key not in {"ip", "reason"}}
+                entry["ip"] = ip
+                entry["reason"] = reason
+                entry.setdefault("requests", 0)
+                entry.setdefault("errors", 0)
+                entry.setdefault("status_counts", {})
+                entry.setdefault("paths", [])
+                entry.setdefault("first_seen_epoch", time.time())
+                entry.setdefault("last_seen_epoch", entry["first_seen_epoch"])
+                THREAT_HISTORY[(ip, reason)] = entry
+        LOGGER.info(
+            "Historique web restauré: fichier=%s menaces=%s visiteurs=%s requêtes=%s",
+            WEB_STATS_STORAGE_PATH,
+            len(THREAT_HISTORY),
+            len(WEB_VISITORS),
+            WEB_STATS["total_requests"],
+        )
+    except (OSError, TypeError, ValueError, json.JSONDecodeError):
+        LOGGER.exception("Impossible de charger l'historique web persistant: %s", WEB_STATS_STORAGE_PATH)
+
+
+def reset_persisted_web_stats():
+    """Clear in-memory and persisted dashboard history."""
+    with WEB_STATS_LOCK:
+        WEB_STATS.update({
+            "total_requests": 0,
+            "by_method": {},
+            "by_path": {},
+            "by_status": {},
+            "bytes_sent": 0,
+            "by_path_status": {},
+        })
+        WEB_VISITORS.clear()
+        WEB_PATH_LAST_SEEN.clear()
+        IP_EVENTS.clear()
+        THREAT_HISTORY.clear()
+    persist_web_stats(force=True)
 
 
 def pdf_text(value):
@@ -929,7 +1046,8 @@ class SiteHandler(SimpleHTTPRequestHandler):
             if len(IP_EVENTS) > 2048:
                 oldest_ip = min(IP_EVENTS, key=lambda ip: IP_EVENTS[ip][-1][0] if IP_EVENTS[ip] else 0)
                 IP_EVENTS.pop(oldest_ip, None)
-        if threat_reason:
+        threat_detected = bool(threat_reason and (status_code >= 400 or _is_sensitive_probe(path)))
+        if threat_detected:
             with WEB_STATS_LOCK:
                 record_threat_history(client_ip, threat_reason, status_code, path)
             LOGGER.warning(
@@ -939,6 +1057,7 @@ class SiteHandler(SimpleHTTPRequestHandler):
                 path,
                 status,
             )
+        persist_web_stats(force=threat_detected)
         super().log_request(code, size)
 
     def _require_admin(self):
@@ -997,6 +1116,15 @@ class SiteHandler(SimpleHTTPRequestHandler):
 
     def do_POST(self):
         path = urlparse(self.path).path
+        if path == "/api/admin/reset-stats":
+            if not self._require_admin():
+                return
+            if self.headers.get("X-Admin-Action") != "reset-stats":
+                self.respond_json(403, {"ok": False, "error": "Action d’administration non autorisée"})
+                return
+            reset_persisted_web_stats()
+            self.respond_json(200, {"ok": True})
+            return
         if path == "/api/admin/update-request":
             if not self._require_admin():
                 return
@@ -1102,6 +1230,7 @@ class SiteHandler(SimpleHTTPRequestHandler):
 
 
 if __name__ == "__main__":
+    load_persisted_web_stats()
     server = ThreadingHTTPServer(("127.0.0.1", PORT), SiteHandler)
     print(f"L’Atelier Roulant est disponible sur http://127.0.0.1:{PORT}")
     try:

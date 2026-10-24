@@ -1,3 +1,5 @@
 # PDF requests are runtime data and must not enter Git.
 data/requests/
 requests/
+.web-stats.json
+__pycache__/

@@ -16,6 +16,8 @@
     p { color:var(--muted); }
     button { border:0; background:var(--ink); color:#fff; padding:10px 15px; border-radius:5px; cursor:pointer; }
     button:hover { background:var(--accent); }
+    .danger-button { background:#8b201b; }
+    .danger-button:hover { background:#b32f2f; }
     .header-tools { display:flex; align-items:center; justify-content:flex-end; gap:12px; }
     .header-status { min-width:220px; padding:9px 12px; border-left:2px solid var(--accent); color:var(--muted); font-size:.76rem; line-height:1.35; }
     .header-status span, .commit-ref span { display:block; margin-bottom:3px; color:var(--muted); font-size:.66rem; letter-spacing:.1em; text-transform:uppercase; }
@@ -104,7 +106,7 @@
 <main>
   <header>
     <div><h1>Administration</h1><p>Statistiques de L’Atelier Roulant</p></div>
-    <div class="header-tools"><button id="refresh">Actualiser</button><div class="header-status"><span>Dernière mise à jour</span><strong id="updated">Chargement…</strong></div><div class="commit-ref"><span>Version chargée</span><code id="commit">—</code></div></div>
+    <div class="header-tools"><button id="refresh">Actualiser</button><button id="reset-stats" class="danger-button" type="button">Réinitialiser l’historique</button><div class="header-status"><span>Dernière mise à jour</span><strong id="updated">Chargement…</strong></div><div class="commit-ref"><span>Version chargée</span><code id="commit">—</code></div></div>
   </header>
   <div id="error"></div>
   <nav class="admin-tabs" role="tablist" aria-label="Sections d’administration">
@@ -247,7 +249,24 @@
     try { const response=await fetch('/api/admin/stats',{cache:'no-store'}); if(!response.ok) throw new Error(`Erreur HTTP ${response.status}`); render(await response.json()); }
     catch (e) { error.innerHTML=`<div class="error">Impossible de charger les statistiques : ${esc(e.message)}</div>`; }
   }
-  document.getElementById('refresh').addEventListener('click',load); load(); setInterval(load,30000);
+  async function resetStats() {
+    if (!confirm('Supprimer tout l’historique des menaces et du trafic web ?')) return;
+    const button = document.getElementById('reset-stats');
+    button.disabled = true;
+    try {
+      const response = await fetch('/api/admin/reset-stats', {method:'POST', headers:{'X-Admin-Action':'reset-stats'}});
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || `Erreur HTTP ${response.status}`);
+      await load();
+    } catch (error) {
+      document.getElementById('error').innerHTML = `<div class="error">Réinitialisation impossible : ${esc(error.message)}</div>`;
+    } finally {
+      button.disabled = false;
+    }
+  }
+  document.getElementById('refresh').addEventListener('click',load);
+  document.getElementById('reset-stats').addEventListener('click',resetStats);
+  load(); setInterval(load,30000);
 </script>
 </body>
 </html>
