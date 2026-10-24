@@ -201,7 +201,8 @@ def persist_web_stats(force=False):
 def load_persisted_web_stats():
     """Restore dashboard counters and threat history after a process restart."""
     if not WEB_STATS_STORAGE_PATH.is_file():
-        LOGGER.info("Aucun historique web persistant: %s", WEB_STATS_STORAGE_PATH)
+        LOGGER.info("Aucun historique web persistant: initialisation de %s", WEB_STATS_STORAGE_PATH)
+        persist_web_stats(force=True)
         return
     try:
         payload = json.loads(WEB_STATS_STORAGE_PATH.read_text(encoding="utf-8"))
