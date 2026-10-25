@@ -45,7 +45,7 @@ group.scale.setScalar(0.49);
 scene.add(group);
 
 const mat = (color, roughness = 0.78) => new THREE.MeshStandardMaterial({ color, roughness, metalness: 0.05 });
-const box = (size, position, material, radius = 0.08) => {
+const box = (size, position, material) => {
   const geometry = new THREE.BoxGeometry(...size);
   const mesh = new THREE.Mesh(geometry, material);
   mesh.position.set(...position);
@@ -513,7 +513,6 @@ const humanGameSequence = ['blue', 'white', 'red'];
 let stepTransitionInProgress = false;
 let addressLookupTimer;
 let addressLookupController;
-let addressSuggestionSelected = false;
 async function loadPublicConfig() {
   if (!legalFooter) return;
   try {
@@ -541,7 +540,7 @@ async function loadPublicConfig() {
     if (legal.phone) addLink(legal.phone, `tel:${String(legal.phone).replace(/[^+\d]/g, '')}`);
     addText(legal.registration);
     if (legal.email) addLink(legal.email, `mailto:${legal.email}`);
-  } catch (error) {
+  } catch {
     // The generic footer remains visible if the public configuration is unavailable.
   }
 }
@@ -718,7 +717,6 @@ function renderAddressSuggestions(results) {
       locationAddress.value = addressPart;
       locationPostcode.value = result.zipcode || '';
       locationTown.value = result.city || '';
-      addressSuggestionSelected = true;
       addressStatus.textContent = 'Adresse sélectionnée.';
       closeAddressSuggestions();
     });
@@ -730,7 +728,6 @@ function renderAddressSuggestions(results) {
 function lookupAddress() {
   window.clearTimeout(addressLookupTimer);
   if (addressLookupController) addressLookupController.abort();
-  addressSuggestionSelected = false;
   const query = [locationAddress.value.trim(), locationPostcode.value.trim(), locationTown.value.trim()].filter(Boolean).join(' ');
   if (query.length < 3) {
     addressStatus.textContent = '';

@@ -25,10 +25,6 @@ def check_module(name: str, label: str) -> tuple[bool, str]:
     return available, f"Python module {label}"
 
 
-def check_path(path: Path, label: str) -> tuple[bool, str]:
-    return path.is_file(), f"{label}: {path}"
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--strict", action="store_true", help="fail on optional checks too")
