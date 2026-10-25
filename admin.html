@@ -125,8 +125,8 @@
       <div class="card"><div class="metric" id="storage">—</div><div class="metric-label">stockage PDF</div></div>
     </div>
     <div class="grid">
-      <section><h2>Menaces</h2><p>Détection locale sur les requêtes du processus depuis son démarrage. Les erreurs serveur 5xx sont affichées mais ne sont pas considérées seules comme une menace.</p><div class="table-wrap"><table class="threat-table"><thead><tr><th>IP</th><th>Pays</th><th>Ville</th><th>Raison</th><th>Requêtes</th><th>Chemins observés</th></tr></thead><tbody id="threats"></tbody></table></div><div class="metric-label visitor-toolbar" style="margin-top:18px"><span>Visiteurs associés aux menaces</span><label for="threat-visitor-period">Période <select id="threat-visitor-period"><option value="today">Aujourd’hui</option><option value="7d">7 jours</option><option value="30d">30 jours</option><option value="all" selected>Tout</option></select></label></div><div class="table-wrap"><table class="traffic-table"><thead><tr><th>IP</th><th>Pays</th><th>Ville</th><th>Requêtes</th><th>Dernière activité</th><th>User-Agent</th></tr></thead><tbody id="threat-visitors"></tbody></table></div></section>
-      <section><h2>Trafic web</h2><div class="metric-label">Codes HTTP</div><div class="bars" id="web-status"></div><div class="metric-label" style="margin-top:18px">Chemins consultés</div><div class="bars" id="web-paths"></div><div class="metric-label visitor-toolbar" style="margin-top:18px"><span>Visiteurs réguliers et localisation GeoIP</span><label for="visitor-period">Période <select id="visitor-period"><option value="today">Aujourd’hui</option><option value="7d">7 jours</option><option value="30d">30 jours</option><option value="all" selected>Tout</option></select></label></div><div class="table-wrap"><table class="traffic-table"><thead><tr><th>IP</th><th>Pays</th><th>Ville</th><th>Requêtes</th><th>Dernière activité</th><th>User-Agent</th></tr></thead><tbody id="web-visitors"></tbody></table></div></section>
+      <section><h2>Menaces</h2><p>Détection locale sur les requêtes du processus depuis son démarrage. Les erreurs serveur 5xx sont affichées mais ne sont pas considérées seules comme une menace.</p><div class="table-wrap"><table class="threat-table"><thead><tr><th>IP</th><th>Pays</th><th>Ville</th><th>Raison</th><th>Requêtes</th><th>Chemins observés</th></tr></thead><tbody id="threats"></tbody></table></div><div class="metric-label visitor-toolbar" style="margin-top:18px"><span>Visiteurs associés aux menaces</span><label for="threat-visitor-period">Période <select id="threat-visitor-period"><option value="today" selected>Aujourd’hui</option><option value="7d">7 jours</option><option value="30d">30 jours</option><option value="all">Tout</option></select></label></div><div class="table-wrap"><table class="traffic-table"><thead><tr><th>IP</th><th>Pays</th><th>Ville</th><th>Requêtes</th><th>Dernière activité</th><th>User-Agent</th></tr></thead><tbody id="threat-visitors"></tbody></table></div></section>
+      <section><h2>Trafic web</h2><div class="metric-label">Codes HTTP</div><div class="bars" id="web-status"></div><div class="metric-label" style="margin-top:18px">Chemins consultés</div><div class="bars" id="web-paths"></div><div class="metric-label visitor-toolbar" style="margin-top:18px"><span>Visiteurs réguliers et localisation GeoIP</span><label for="visitor-period">Période <select id="visitor-period"><option value="today" selected>Aujourd’hui</option><option value="7d">7 jours</option><option value="30d">30 jours</option><option value="all">Tout</option></select></label></div><div class="table-wrap"><table class="traffic-table"><thead><tr><th>IP</th><th>Pays</th><th>Ville</th><th>Requêtes</th><th>Dernière activité</th><th>User-Agent</th></tr></thead><tbody id="web-visitors"></tbody></table></div></section>
     </div>
   </div>
   <div id="tab-requests" class="tab-panel" role="tabpanel" aria-labelledby="tab-button-requests" hidden>
@@ -152,8 +152,8 @@
   const number = new Intl.NumberFormat('fr-FR');
   let requestItems = [];
   let visitorItems = [];
-  let visitorPeriod = 'all';
-  let threatVisitorPeriod = 'all';
+  let visitorPeriod = 'today';
+  let threatVisitorPeriod = 'today';
   let threatItems = [];
   let sortKey = 'date';
   let sortDirection = -1;
