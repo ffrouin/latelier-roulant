@@ -1010,7 +1010,9 @@ def collect_admin_stats():
                     "ip": ip,
                     "requests": details["requests"],
                     "bytes_sent": details["bytes_sent"],
+                    "last_seen_epoch": details["last_seen"],
                     "last_seen": datetime.fromtimestamp(details["last_seen"]).astimezone().isoformat(timespec="seconds"),
+                    "user_agent": details.get("user_agent", ""),
                     **_geoip(ip),
                 }
                 for ip, details in sorted(
@@ -1089,10 +1091,11 @@ class SiteHandler(SimpleHTTPRequestHandler):
             path_statuses = WEB_STATS["by_path_status"].setdefault(path, {})
             path_statuses[status] = path_statuses.get(status, 0) + 1
             WEB_PATH_LAST_SEEN[(path, status)] = time.time()
-            visitor = WEB_VISITORS.setdefault(client_ip, {"requests": 0, "bytes_sent": 0, "last_seen": 0})
+            visitor = WEB_VISITORS.setdefault(client_ip, {"requests": 0, "bytes_sent": 0, "last_seen": 0, "user_agent": ""})
             visitor["requests"] += 1
             visitor["bytes_sent"] += sent
             visitor["last_seen"] = time.time()
+            visitor["user_agent"] = self.headers.get("User-Agent", "")[:300]
             if len(WEB_VISITORS) > 2048:
                 oldest_visitor = min(WEB_VISITORS, key=lambda ip: WEB_VISITORS[ip]["last_seen"])
                 WEB_VISITORS.pop(oldest_visitor, None)

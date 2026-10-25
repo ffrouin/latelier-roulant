@@ -33,6 +33,9 @@
     .card, section { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:20px; }
     .metric { font-size:2rem; font-weight:700; letter-spacing:-.05em; }
     .metric-label { color:var(--muted); font-size:.82rem; margin-top:5px; }
+    .visitor-toolbar { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    .visitor-toolbar label { display:inline-flex; align-items:center; gap:7px; color:var(--muted); font-size:.75rem; font-weight:600; }
+    .visitor-toolbar select { border:1px solid var(--line); border-radius:4px; padding:5px 7px; color:var(--ink); background:#fff; font:500 .76rem Inter,system-ui,sans-serif; }
     .grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:18px; }
     .bars { display:grid; gap:10px; }
     .bar-row { display:grid; grid-template-columns:minmax(110px,1fr) 2fr 35px; align-items:center; gap:10px; font-size:.86rem; }
@@ -68,11 +71,12 @@
     .threat-table th:nth-child(4), .threat-table td:nth-child(4) { width:24%; }
     .threat-table th:nth-child(5), .threat-table td:nth-child(5) { width:10%; }
     .threat-table th:nth-child(6), .threat-table td:nth-child(6) { width:26%; }
-    .traffic-table th:nth-child(1), .traffic-table td:nth-child(1) { width:24%; }
-    .traffic-table th:nth-child(2), .traffic-table td:nth-child(2) { width:20%; }
-    .traffic-table th:nth-child(3), .traffic-table td:nth-child(3) { width:20%; }
-    .traffic-table th:nth-child(4), .traffic-table td:nth-child(4) { width:16%; }
-    .traffic-table th:nth-child(5), .traffic-table td:nth-child(5) { width:20%; }
+    .traffic-table th:nth-child(1), .traffic-table td:nth-child(1) { width:17%; }
+    .traffic-table th:nth-child(2), .traffic-table td:nth-child(2) { width:13%; }
+    .traffic-table th:nth-child(3), .traffic-table td:nth-child(3) { width:13%; }
+    .traffic-table th:nth-child(4), .traffic-table td:nth-child(4) { width:10%; }
+    .traffic-table th:nth-child(5), .traffic-table td:nth-child(5) { width:17%; }
+    .traffic-table th:nth-child(6), .traffic-table td:nth-child(6) { width:30%; }
     .ip-whois { color:var(--accent); text-decoration:underline dotted; text-underline-offset:3px; }
     .ip-whois:hover { color:var(--ink); }
     .table-wrap { overflow:auto; }
@@ -121,8 +125,8 @@
       <div class="card"><div class="metric" id="storage">—</div><div class="metric-label">stockage PDF</div></div>
     </div>
     <div class="grid">
-      <section><h2>Menaces</h2><p>Détection locale sur les requêtes du processus depuis son démarrage. Les erreurs serveur 5xx sont affichées mais ne sont pas considérées seules comme une menace.</p><div class="table-wrap"><table class="threat-table"><thead><tr><th>IP</th><th>Pays</th><th>Ville</th><th>Raison</th><th>Requêtes</th><th>Chemins observés</th></tr></thead><tbody id="threats"></tbody></table></div></section>
-      <section><h2>Trafic web</h2><div class="metric-label">Codes HTTP</div><div class="bars" id="web-status"></div><div class="metric-label" style="margin-top:18px">Chemins consultés</div><div class="bars" id="web-paths"></div><div class="metric-label" style="margin-top:18px">Visiteurs et localisation GeoIP</div><div class="table-wrap"><table class="traffic-table"><thead><tr><th>IP</th><th>Pays</th><th>Ville</th><th>Requêtes</th><th>Dernière activité</th></tr></thead><tbody id="web-visitors"></tbody></table></div></section>
+      <section><h2>Menaces</h2><p>Détection locale sur les requêtes du processus depuis son démarrage. Les erreurs serveur 5xx sont affichées mais ne sont pas considérées seules comme une menace.</p><div class="table-wrap"><table class="threat-table"><thead><tr><th>IP</th><th>Pays</th><th>Ville</th><th>Raison</th><th>Requêtes</th><th>Chemins observés</th></tr></thead><tbody id="threats"></tbody></table></div><div class="metric-label visitor-toolbar" style="margin-top:18px"><span>Visiteurs associés aux menaces</span><label for="threat-visitor-period">Période <select id="threat-visitor-period"><option value="today">Aujourd’hui</option><option value="7d">7 jours</option><option value="30d">30 jours</option><option value="all" selected>Tout</option></select></label></div><div class="table-wrap"><table class="traffic-table"><thead><tr><th>IP</th><th>Pays</th><th>Ville</th><th>Requêtes</th><th>Dernière activité</th><th>User-Agent</th></tr></thead><tbody id="threat-visitors"></tbody></table></div></section>
+      <section><h2>Trafic web</h2><div class="metric-label">Codes HTTP</div><div class="bars" id="web-status"></div><div class="metric-label" style="margin-top:18px">Chemins consultés</div><div class="bars" id="web-paths"></div><div class="metric-label visitor-toolbar" style="margin-top:18px"><span>Visiteurs réguliers et localisation GeoIP</span><label for="visitor-period">Période <select id="visitor-period"><option value="today">Aujourd’hui</option><option value="7d">7 jours</option><option value="30d">30 jours</option><option value="all" selected>Tout</option></select></label></div><div class="table-wrap"><table class="traffic-table"><thead><tr><th>IP</th><th>Pays</th><th>Ville</th><th>Requêtes</th><th>Dernière activité</th><th>User-Agent</th></tr></thead><tbody id="web-visitors"></tbody></table></div></section>
     </div>
   </div>
   <div id="tab-requests" class="tab-panel" role="tabpanel" aria-labelledby="tab-button-requests" hidden>
@@ -147,6 +151,10 @@
 <script>
   const number = new Intl.NumberFormat('fr-FR');
   let requestItems = [];
+  let visitorItems = [];
+  let visitorPeriod = 'all';
+  let threatVisitorPeriod = 'all';
+  let threatItems = [];
   let sortKey = 'date';
   let sortDirection = -1;
   const followupDialog = document.getElementById('followup-dialog');
@@ -226,9 +234,28 @@
     target.innerHTML = threats?.length ? threats.map(item => `<tr><td>${whoisLink(item.ip)}</td><td>${esc(item.country)}</td><td>${esc(item.city)}</td><td>${esc(item.reason)}</td><td>${number.format(item.requests)}<br><small>${number.format(item.errors)} erreur(s)</small></td><td>${(item.paths || []).map(path => esc(path)).join('<br>')}</td></tr>`).join('') : '<tr><td colspan="6" class="empty">Aucune menace détectée.</td></tr>';
   }
   const whoisLink = ip => `<a class="ip-whois" href="https://whatismyipaddress.com/ip/${encodeURIComponent(ip)}" target="_blank" rel="noopener noreferrer" title="Voir les données WHOIS de ${esc(ip)}">${esc(ip)}</a>`;
-  function renderVisitors(visitors) {
-    const target = document.getElementById('web-visitors');
-    target.innerHTML = visitors?.length ? visitors.map(item => `<tr><td>${whoisLink(item.ip)}</td><td>${esc(item.country)}</td><td>${esc(item.city)}</td><td>${number.format(item.requests)}</td><td>${esc(item.last_seen)}</td></tr>`).join('') : '<tr><td colspan="5" class="empty">Aucun visiteur enregistré.</td></tr>';
+  function visitorCutoff(period) {
+    if (period === 'all') return 0;
+    if (period === 'today') {
+      const start = new Date();
+      start.setHours(0, 0, 0, 0);
+      return start.getTime() / 1000;
+    }
+    const days = period === '7d' ? 7 : 30;
+    return Date.now() / 1000 - days * 86400;
+  }
+  function renderVisitors(targetId, visitors, period) {
+    const target = document.getElementById(targetId);
+    const cutoff = visitorCutoff(period);
+    const filtered = (visitors || []).filter(item => period === 'all' || Number(item.last_seen_epoch || 0) >= cutoff);
+    target.innerHTML = filtered.length ? filtered.map(item => `<tr><td>${whoisLink(item.ip)}</td><td>${esc(item.country)}</td><td>${esc(item.city)}</td><td>${number.format(item.requests)}</td><td>${esc(item.last_seen)}</td><td>${esc(item.user_agent || 'Inconnu')}</td></tr>`).join('') : '<tr><td colspan="6" class="empty">Aucun visiteur pour cette période.</td></tr>';
+  }
+  function renderVisitorGroups(visitors, threats) {
+    const threatIps = new Set((threats || []).map(item => item.ip));
+    const threatened = (visitors || []).filter(item => threatIps.has(item.ip));
+    const regular = (visitors || []).filter(item => !threatIps.has(item.ip));
+    renderVisitors('threat-visitors', threatened, threatVisitorPeriod);
+    renderVisitors('web-visitors', regular, visitorPeriod);
   }
   function render(data) {
     const r=data.requests, w=data.web;
@@ -239,11 +266,13 @@
     document.getElementById('updated').textContent=`Mis à jour ${new Date(data.generated_at).toLocaleString('fr-FR')}`;
     document.getElementById('commit').textContent=`Commit chargé : ${data.commit || 'inconnu'}`;
     bars('services',r.by_service); bars('urgencies',r.by_urgency); bars('availability',r.by_availability); bars('request-statuses',r.by_status);
-    bars('web-status',w.by_status); renderPaths(w.by_path_status); renderVisitors(w.visitors); renderThreats(data.threats);
+    bars('web-status',w.by_status); renderPaths(w.by_path_status); visitorItems = w.visitors || []; threatItems = data.threats || []; renderVisitorGroups(visitorItems, threatItems); renderThreats(threatItems);
     requestItems = r.items || [];
     renderRequests();
   }
   document.querySelectorAll('[data-sort]').forEach(button => button.addEventListener('click', () => { const nextKey=button.dataset.sort; if(sortKey===nextKey) sortDirection*=-1; else { sortKey=nextKey; sortDirection=1; } renderRequests(); }));
+  document.getElementById('visitor-period').addEventListener('change', event => { visitorPeriod = event.target.value; renderVisitorGroups(visitorItems, threatItems); });
+  document.getElementById('threat-visitor-period').addEventListener('change', event => { threatVisitorPeriod = event.target.value; renderVisitorGroups(visitorItems, threatItems); });
   async function load() {
     const error=document.getElementById('error'); error.innerHTML='';
     try { const response=await fetch('/api/admin/stats',{cache:'no-store'}); if(!response.ok) throw new Error(`Erreur HTTP ${response.status}`); render(await response.json()); }
