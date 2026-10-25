@@ -1,140 +1,176 @@
-# L’Atelier Roulant
+# L'Atelier Roulant
 
-> Réparer plutôt que remplacer
+Mobile repair and reuse service website. The application provides:
 
-Page de présentation d’un service de réparations, dépannages et débarras à domicile.
+- Three.js welcome scene and mairie information scene;
+- five-step service request wizard;
+- up to three image uploads per request;
+- one-page PDF generation with QR code and clickable PDF link;
+- SMTP notification to the configured owner address;
+- HTTP Basic Auth administration;
+- persistent traffic, visitor, path, and threat statistics;
+- PDF-based request status and observation history.
 
-## Positionnement
+## Runtime
 
-**L’Atelier Roulant** intervient chez les particuliers pour :
+- Python 3
+- Pillow
+- `qrencode` — QR generation
+- `qpdf` — PDF follow-up overlay
+- `pdftotext` — admin PDF extraction
+- `git` — runtime commit display; direct `.git` reading is used as fallback
+- Optional GeoIP:
+  - Python `geoip2` + GeoLite2 `.mmdb`, or
+  - Python `GeoIP` + legacy `.dat`
+- Browser JavaScript/WebGL
+- Three.js is loaded from a CDN by `index.html`
 
-- diagnostiquer et réparer l’électroménager ;
-- aider au diagnostic et à la réparation de matériel informatique et électronique ;
-- remettre en état meubles, murs, sols et plafonds ;
-- débarrasser les encombrants et favoriser le réemploi lorsque c’est possible.
-
-## Lancer le site en local
-
-Le site utilise Three.js depuis un module CDN et se sert avec Python :
-
-```bash
-python3 app.py
-```
-
-Puis ouvrir [http://127.0.0.1:8000](http://127.0.0.1:8000).
-
-Le port peut être modifié :
-
-```bash
-PORT=8080 python3 app.py
-```
-
-### Vérifier les dépendances au démarrage
-
-Avant de lancer le serveur, exécutez le contrôle reproductible suivant :
+Check the local runtime before starting:
 
 ```bash
 python3 scripts/check_dependencies.py
 ```
 
-Il vérifie Python/Pillow, les binaires `qrencode`, `qpdf` et `pdftotext`,
-les fichiers de l’application, le stockage des demandes, la configuration
-SMTP et l’URL publique. `git` et GeoIP sont signalés lorsqu’ils sont
-disponibles ou configurés. Le serveur exécute également ces contrôles au
-démarrage et écrit un avertissement explicite dans ses logs sans empêcher le
-démarrage local.
+The check reports missing binaries, Python modules, assets, writable storage, SMTP configuration, and URL configuration. `app.py` performs the same non-blocking checks at startup.
 
-### Envoi des demandes
-
-Après la confirmation humaine, le serveur génère un PDF de synthèse et
-l’envoie uniquement à `OWNER_EMAIL` pour la notification backend. Le PDF est
-également renvoyé au navigateur pour être consulté ou téléchargé par l’usager.
-Configurez
-les variables SMTP avant de lancer le serveur :
+## Local development
 
 ```bash
-export OWNER_EMAIL="me@my.mail"
-export SMTP_HOST="smtp.my.mail"
-export SMTP_PORT="587"
-export SMTP_USERNAME="me@my.mail"
-export SMTP_PASSWORD="mot-de-passe-fourni-par-le-fournisseur"
-export SMTP_FROM="me@my.mail"
-export SMTP_STARTTLS="1"
-export PUBLIC_BASE_URL="https://atelier-roulant.linuxtribe.fr"
-export REQUEST_STORAGE_DIR="/opt/latelier-roulant/requests"
-export GEOIP_LEGACY_DB_PATH="/opt/GeoIPv2/GeoLiteCity.dat"
-export LEGAL_BUSINESS_NAME="L'Atelier Roulant"
-export LEGAL_CONTACT_NAME=""
-export LEGAL_PHONE=""
-export LEGAL_REGISTRATION=""
-export LEGAL_EMAIL="me@my.mail"
-export ADMIN_USERNAME="admin"
-export ADMIN_PASSWORD="mot-de-passe-admin-fort-et-hors-du-depot"
 python3 app.py
+# http://127.0.0.1:8000
 ```
 
-`SMTP_PASSWORD` ne doit pas être inscrit dans le dépôt. Sans configuration
-SMTP complète, l’interface signale que l’envoi n’est pas disponible et permet
-de réessayer après configuration du serveur.
+Change the port with:
 
-En production, si le dépôt est installé dans `/opt/latelier-roulant` et que les
-PDF sont stockés dans `/opt/latelier-roulant/requests`, définissez explicitement
-`REQUEST_STORAGE_DIR=/opt/latelier-roulant/requests`. À défaut, l’application
-utilise automatiquement le dossier `requests/` s’il existe à côté de `app.py`,
-et conserve `data/requests/` comme repli pour le développement local historique.
+```bash
+PORT=8080 python3 app.py
+```
 
-### Administration
+The development server should be bound to loopback only. Do not expose it directly to the Internet.
 
-La page `/admin` est protégée par une authentification HTTP Basic. Elle est
-désactivée si `ADMIN_PASSWORD` n’est pas défini. Elle affiche les compteurs web persistés et analyse les PDF présents dans
-`REQUEST_STORAGE_DIR` pour présenter le nombre de demandes, les répartitions
-par besoin/disponibilité/urgence/statut, le tri de chaque colonne et la liste des documents. Chaque ligne permet d’ouvrir le PDF, de modifier son suivi ou de le supprimer après confirmation. Une modification de statut ou une observation est ajoutée comme nouvelle page dans le PDF lui-même ; aucun fichier de métadonnées séparé n’est créé. Les nouvelles références PDF utilisent 32 caractères hexadécimaux aléatoires (les anciennes références de 12 caractères restent lisibles). La suppression et la mise à jour sont protégées par l’authentification administrateur et agissent uniquement sur le fichier PDF runtime. Le mot de passe administrateur doit rester dans l’environnement systemd ou nginx, jamais dans Git. Les compteurs de trafic web, les visiteurs, les chemins et l’historique des menaces sont persistés dans `.web-stats.json` sous `APP_HOME` (ou dans le chemin défini par `WEB_STATS_STORAGE_PATH`) et sont restaurés après un redémarrage. Le bouton **Réinitialiser l’historique** permet de supprimer ces statistiques à la demande. La référence du commit est récupérée automatiquement par `app.py` depuis le dépôt Git local, y compris sans exécuter la commande `git` lorsque les métadonnées `.git` sont accessibles.
+## Configuration
 
-Le port `587` est utilisé avec STARTTLS par défaut. Le port `465` est aussi
-possible avec `SMTP_SSL="1"`.
+Use environment variables or a protected systemd environment file. Never commit passwords, tokens, or private keys.
 
-La section **Menaces** conserve désormais son historique pendant la durée de
-vie du processus, au lieu de disparaître après la fenêtre courte utilisée pour
-détecter les séquences suspectes. Les erreurs 404 restent visibles dans les
-chemins consultés pendant une heure après leur dernière occurrence ; les
-autres statuts ne sont pas expirés par cette règle. Le bloc **Trafic web**
-conserve aussi les visiteurs vus depuis le démarrage, avec leur pays et leur
-ville lorsque la base GeoIP locale peut les déterminer. Les erreurs 5xx sont
-affichées dans le trafic mais ne sont pas considérées seules comme une attaque.
-La géolocalisation est facultative et utilise en priorité une base GeoIP2
-`.mmdb`, puis accepte les anciennes bases GeoLite City `.dat` via
-`GEOIP_LEGACY_DB_PATH` (par exemple `/opt/GeoIPv2/GeoLiteCity.dat`) ; sans
-bibliothèque ou base compatible, le pays et la ville restent affichés comme non
-disponibles.
+### Application
 
-La génération du PDF enrichi utilise Pillow et `qrencode` pour intégrer la
-photo envoyée et le QR code. Le suivi PDF utilise également `qpdf`
-(paquet `qpdf`) afin d’ajouter l’historique directement sur la première page
-sans créer de page supplémentaire. Le compte du service doit pouvoir écrire dans
-`REQUEST_STORAGE_DIR`, qui contient les PDF accessibles par leur référence.
-Avec un service systemd utilisant `ProtectSystem=strict`, ajoutez également
-`ReadWritePaths=/opt/latelier-roulant/requests` dans la section
-`[Service]`.
+| Variable | Purpose | Default |
+|---|---|---|
+| `APP_HOME` | Logical application root | Directory containing `app.py` |
+| `PORT` | HTTP listen port | `8000` |
+| `PUBLIC_BASE_URL` | Public PDF and QR base URL | `https://atelier-roulant.linuxtribe.fr` |
+| `REQUEST_STORAGE_DIR` | PDF storage directory | `requests/`, then `data/requests/` |
+| `OWNER_EMAIL` | Notification recipient | `me@my.mail` |
+| `WEB_STATS_STORAGE_PATH` | Persistent statistics file | `$APP_HOME/.web-stats.json` |
 
-## Structure
+### SMTP
+
+| Variable | Purpose |
+|---|---|
+| `SMTP_HOST` | SMTP server |
+| `SMTP_PORT` | SMTP port; `587` by default |
+| `SMTP_USERNAME` | SMTP login; defaults to `OWNER_EMAIL` |
+| `SMTP_PASSWORD` | SMTP password; required for submission |
+| `SMTP_FROM` | Sender address |
+| `SMTP_STARTTLS` | Enable STARTTLS on the SMTP connection |
+| `SMTP_SSL` | Use implicit TLS, e.g. port `465` |
+
+Example, with the password supplied outside Git:
+
+```bash
+export OWNER_EMAIL='operator@example.invalid'
+export SMTP_HOST='smtp.example.invalid'
+export SMTP_PORT='587'
+export SMTP_USERNAME='operator@example.invalid'
+export SMTP_PASSWORD='[REDACTED]'
+export SMTP_FROM='operator@example.invalid'
+export SMTP_STARTTLS='1'
+```
+
+SMTP failures are returned to the browser. The application distinguishes PDF generation from notification delivery and does not claim delivery without an SMTP response.
+
+### Legal data
+
+These values are injected into the public footer and generated PDFs:
+
+```bash
+export LEGAL_BUSINESS_NAME='L\'Atelier Roulant'
+export LEGAL_CONTACT_NAME='[NAME]'
+export LEGAL_PHONE='[PHONE]'
+export LEGAL_REGISTRATION='[REGISTRATION]'
+export LEGAL_EMAIL='operator@example.invalid'
+```
+
+The public footer renders `LEGAL_PHONE` as a `tel:` link and `LEGAL_EMAIL` as a `mailto:` link.
+
+### Administration and GeoIP
+
+```bash
+export ADMIN_USERNAME='admin'
+export ADMIN_PASSWORD='[REDACTED]'
+export GEOIP_DB_PATH='/usr/share/GeoIP/GeoLite2-City.mmdb'
+export GEOIP_LEGACY_DB_PATH='/opt/GeoIPv2/GeoLiteCity.dat'
+```
+
+`/admin` and its JSON API require HTTP Basic Auth. If `ADMIN_PASSWORD` is unset, administration is disabled and returns `404`.
+
+GeoIP is optional and uses local databases only. No remote GeoIP lookup is performed.
+
+## Storage and PDFs
+
+- Request PDFs are stored under `REQUEST_STORAGE_DIR`.
+- New references use 32 uppercase hexadecimal characters.
+- Legacy 12-character references remain readable.
+- PDFs are served only by known opaque reference; storage directories are not listable through the application.
+- Uploaded images are decoded with Pillow, converted to RGB, bounded, and placed with preserved aspect ratio.
+- Empty photo lists produce no photo heading or placeholder.
+- PDF photos are placed below the status/observation row and reserve space for the QR code and footer.
+- Status and observation history is overlaid onto page one with `qpdf`; the PDF remains one page and no sidecar metadata file is used.
+- The QR payload contains the complete public PDF URL and its PDF annotation uses the same rectangle.
+
+The service account must be able to write to `REQUEST_STORAGE_DIR`. With systemd hardening enabled:
+
+```ini
+ReadWritePaths=/opt/latelier-roulant/requests
+```
+
+## HTTP surface
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/` | Public site |
+| `GET` | `/api/public-config` | Public legal configuration |
+| `POST` | `/api/submit-request` | Validate request, create PDF, send notification |
+| `GET` | `/requests/<REFERENCE>.pdf` | Retrieve a known PDF reference |
+| `GET` | `/admin` | Authenticated administration |
+| `GET` | `/api/admin/stats` | Authenticated dashboard data |
+| `POST` | `/api/admin/update-request` | Authenticated PDF follow-up update |
+| `POST` | `/api/admin/delete-request` | Authenticated PDF deletion |
+| `POST` | `/api/admin/reset-stats` | Authenticated statistics reset |
+
+The browser human-check is a UX gate, not a security boundary. `human_confirmed` must not be treated as a server-grade CAPTCHA token.
+
+## Production checklist
+
+1. Run `python3 scripts/check_dependencies.py` as the service user.
+2. Configure SMTP, legal values, `PUBLIC_BASE_URL`, storage, and admin credentials outside Git.
+3. Install the required binaries and Python modules.
+4. Ensure `REQUEST_STORAGE_DIR` exists and is writable by the service user.
+5. Bind Python to loopback and proxy it through Nginx.
+6. Deny directory listing and source-file access in Nginx.
+7. Run under a dedicated unprivileged systemd user.
+8. Enable HTTPS and request-rate limiting at Nginx.
+9. Restart the service after deployment and verify the reported commit in `/admin`.
+10. Test one-photo, three-photo, no-photo, PDF follow-up, QR annotation, SMTP failure, and admin authorization paths.
+
+## Repository layout
 
 ```text
-.
-├── app.py          # Serveur HTTP Python minimal
-├── index.html      # Structure et styles de la page d’accueil
-├── admin.html      # Tableau de bord protégé des statistiques
-└── js/main.js      # Scène Three.js et interactions visuelles
+app.py                       HTTP server, PDF generation, SMTP, admin API
+index.html                   Public HTML and CSS
+admin.html                   Admin dashboard
+js/main.js                   Three.js scene and browser workflow
+scripts/check_dependencies.py Runtime dependency checker
+assets/                      Static assets
+requests/ or data/requests/  Runtime PDF storage; do not commit
 ```
-
-## État du prototype
-
-Cette première version présente l’identité, la promesse et les grandes familles de services. Les coordonnées, zones d’intervention, tarifs, formulaire de contact et mentions légales restent à compléter avant la mise en production.
-
-## Mise en production
-
-Le service Python peut être placé derrière Nginx. Pour un usage public, prévoir notamment :
-
-- un service supervisé (systemd, Docker ou équivalent) ;
-- le bind du serveur sur l’interface appropriée ;
-- HTTPS et les en-têtes de sécurité côté reverse proxy ;
-- les informations légales et les coordonnées commerciales.
