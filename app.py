@@ -174,6 +174,7 @@ WEB_STATS = {
     "by_path_status": {},
 }
 WEB_VISITORS = {}
+WEB_BOTS = {}
 WEB_PATH_LAST_SEEN = {}
 IP_EVENTS = defaultdict(deque)
 THREAT_HISTORY = {}
@@ -200,9 +201,10 @@ GEOIP_DIAGNOSTICS = {
 
 def _stats_payload_locked():
     return {
-        "version": 1,
+        "version": 2,
         "web_stats": copy.deepcopy(WEB_STATS),
         "web_visitors": copy.deepcopy(WEB_VISITORS),
+        "web_bots": copy.deepcopy(WEB_BOTS),
         "web_path_last_seen": [
             {"path": path, "status": status, "last_seen": timestamp}
             for (path, status), timestamp in WEB_PATH_LAST_SEEN.items()
@@ -255,6 +257,8 @@ def load_persisted_web_stats():
                     WEB_STATS[key] = stored_web[key]
             if isinstance(payload.get("web_visitors"), dict):
                 WEB_VISITORS.update(payload["web_visitors"])
+            if isinstance(payload.get("web_bots"), dict):
+                WEB_BOTS.update(payload["web_bots"])
             for item in payload.get("web_path_last_seen", []):
                 path, status, timestamp = item.get("path"), item.get("status"), item.get("last_seen")
                 if isinstance(path, str) and isinstance(status, str) and isinstance(timestamp, (int, float)):
@@ -296,6 +300,7 @@ def reset_persisted_web_stats():
             "by_path_status": {},
         })
         WEB_VISITORS.clear()
+        WEB_BOTS.clear()
         WEB_PATH_LAST_SEEN.clear()
         IP_EVENTS.clear()
         THREAT_HISTORY.clear()
@@ -928,6 +933,56 @@ def record_threat_history(ip, reason, status, path):
         THREAT_HISTORY.pop(oldest_key, None)
 
 
+KNOWN_BOT_SIGNATURES = (
+    ("Googlebot", re.compile(r"googlebot|google-inspectiontool|storebot-google", re.I)),
+    ("Bingbot", re.compile(r"bingbot|adidxbot|bingpreview", re.I)),
+    ("Facebook", re.compile(r"facebookexternalhit|facebot", re.I)),
+    ("Twitter", re.compile(r"twitterbot", re.I)),
+    ("LinkedIn", re.compile(r"linkedinbot", re.I)),
+    ("Slack", re.compile(r"slackbot", re.I)),
+    ("Discord", re.compile(r"discordbot", re.I)),
+    ("Applebot", re.compile(r"applebot", re.I)),
+    ("Pinterest", re.compile(r"pinterest", re.I)),
+    ("Ahrefs", re.compile(r"ahrefsbot", re.I)),
+    ("Semrush", re.compile(r"semrushbot", re.I)),
+    ("MJ12bot", re.compile(r"mj12bot", re.I)),
+    ("Bytespider", re.compile(r"bytespider", re.I)),
+    ("GPTBot", re.compile(r"gptbot", re.I)),
+    ("ClaudeBot", re.compile(r"claudebot", re.I)),
+)
+GENERIC_BOT_SIGNATURE = re.compile(r"bot|crawler|spider|scrapy|headless|curl|wget|python-requests|libwww", re.I)
+
+
+def classify_user_agent(user_agent):
+    """Classify a User-Agent for reporting; this is not an authentication signal."""
+    value = (user_agent or "").strip()[:300]
+    for family, signature in KNOWN_BOT_SIGNATURES:
+        if signature.search(value):
+            return {"classification": "known_bot", "bot_family": family, "confidence": "medium", "reason": "user-agent"}
+    if GENERIC_BOT_SIGNATURE.search(value):
+        return {"classification": "suspected_bot", "bot_family": "Other crawler", "confidence": "low", "reason": "user-agent"}
+    return {"classification": "human", "bot_family": "", "confidence": "", "reason": ""}
+
+
+def visitor_rows(source, limit=200):
+    rows = []
+    for key, details in sorted(source.items(), key=lambda item: item[1].get("last_seen", 0), reverse=True)[:limit]:
+        rows.append({
+            "ip": details.get("ip", key.split("|", 1)[0]),
+            "requests": details.get("requests", 0),
+            "bytes_sent": details.get("bytes_sent", 0),
+            "last_seen_epoch": details.get("last_seen", 0),
+            "last_seen": datetime.fromtimestamp(details.get("last_seen", 0)).astimezone().isoformat(timespec="seconds"),
+            "user_agent": details.get("user_agent", ""),
+            "classification": details.get("classification", "human"),
+            "bot_family": details.get("bot_family", ""),
+            "confidence": details.get("confidence", ""),
+            "reason": details.get("reason", ""),
+            **_geoip(details.get("ip", key.split("|", 1)[0])),
+        })
+    return rows
+
+
 def collect_admin_stats():
     """Return process web counters and metadata extracted from stored request PDFs."""
     request_rows = []
@@ -1005,22 +1060,8 @@ def collect_admin_stats():
                 path: dict(statuses)
                 for path, statuses in visible_path_status.items()
             },
-            "visitors": [
-                {
-                    "ip": ip,
-                    "requests": details["requests"],
-                    "bytes_sent": details["bytes_sent"],
-                    "last_seen_epoch": details["last_seen"],
-                    "last_seen": datetime.fromtimestamp(details["last_seen"]).astimezone().isoformat(timespec="seconds"),
-                    "user_agent": details.get("user_agent", ""),
-                    **_geoip(ip),
-                }
-                for ip, details in sorted(
-                    WEB_VISITORS.items(),
-                    key=lambda item: item[1]["last_seen"],
-                    reverse=True,
-                )[:200]
-            ],
+            "visitors": visitor_rows(WEB_VISITORS),
+            "bots": visitor_rows(WEB_BOTS),
             "geoip": geoip_diagnostics(),
         }
     def count_by(field):
@@ -1082,6 +1123,8 @@ class SiteHandler(SimpleHTTPRequestHandler):
         status_code = int(status) if status.isdigit() else 0
         sent = int(size) if str(size).isdigit() else 0
         client_ip = self.client_ip()
+        user_agent = self.headers.get("User-Agent", "")[:300]
+        bot_info = classify_user_agent(user_agent)
         with WEB_STATS_LOCK:
             WEB_STATS["total_requests"] += 1
             WEB_STATS["bytes_sent"] += sent
@@ -1091,14 +1134,31 @@ class SiteHandler(SimpleHTTPRequestHandler):
             path_statuses = WEB_STATS["by_path_status"].setdefault(path, {})
             path_statuses[status] = path_statuses.get(status, 0) + 1
             WEB_PATH_LAST_SEEN[(path, status)] = time.time()
-            visitor = WEB_VISITORS.setdefault(client_ip, {"requests": 0, "bytes_sent": 0, "last_seen": 0, "user_agent": ""})
-            visitor["requests"] += 1
-            visitor["bytes_sent"] += sent
-            visitor["last_seen"] = time.time()
-            visitor["user_agent"] = self.headers.get("User-Agent", "")[:300]
-            if len(WEB_VISITORS) > 2048:
-                oldest_visitor = min(WEB_VISITORS, key=lambda ip: WEB_VISITORS[ip]["last_seen"])
-                WEB_VISITORS.pop(oldest_visitor, None)
+            if bot_info["classification"] == "human":
+                visitor = WEB_VISITORS.setdefault(client_ip, {"ip": client_ip, "requests": 0, "bytes_sent": 0, "last_seen": 0, "user_agent": ""})
+                visitor["requests"] += 1
+                visitor["bytes_sent"] += sent
+                visitor["last_seen"] = time.time()
+                visitor["user_agent"] = user_agent
+                if len(WEB_VISITORS) > 2048:
+                    oldest_visitor = min(WEB_VISITORS, key=lambda ip: WEB_VISITORS[ip]["last_seen"])
+                    WEB_VISITORS.pop(oldest_visitor, None)
+            else:
+                bot_key = f"{client_ip}|{user_agent}"
+                bot = WEB_BOTS.setdefault(bot_key, {
+                    "ip": client_ip,
+                    "requests": 0,
+                    "bytes_sent": 0,
+                    "last_seen": 0,
+                    "user_agent": user_agent,
+                    **bot_info,
+                })
+                bot["requests"] += 1
+                bot["bytes_sent"] += sent
+                bot["last_seen"] = time.time()
+                if len(WEB_BOTS) > 2048:
+                    oldest_bot = min(WEB_BOTS, key=lambda key: WEB_BOTS[key]["last_seen"])
+                    WEB_BOTS.pop(oldest_bot, None)
             threat_reason = _record_ip_event(client_ip, status_code, path)
             if len(IP_EVENTS) > 2048:
                 oldest_ip = min(IP_EVENTS, key=lambda ip: IP_EVENTS[ip][-1][0] if IP_EVENTS[ip] else 0)

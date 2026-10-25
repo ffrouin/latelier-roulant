@@ -77,6 +77,15 @@
     .traffic-table th:nth-child(4), .traffic-table td:nth-child(4) { width:10%; }
     .traffic-table th:nth-child(5), .traffic-table td:nth-child(5) { width:17%; }
     .traffic-table th:nth-child(6), .traffic-table td:nth-child(6) { width:30%; }
+    .bot-table th:nth-child(1), .bot-table td:nth-child(1) { width:12%; }
+    .bot-table th:nth-child(2), .bot-table td:nth-child(2) { width:13%; }
+    .bot-table th:nth-child(3), .bot-table td:nth-child(3) { width:9%; }
+    .bot-table th:nth-child(4), .bot-table td:nth-child(4) { width:15%; }
+    .bot-table th:nth-child(5), .bot-table td:nth-child(5) { width:10%; }
+    .bot-table th:nth-child(6), .bot-table td:nth-child(6) { width:10%; }
+    .bot-table th:nth-child(7), .bot-table td:nth-child(7) { width:8%; }
+    .bot-table th:nth-child(8), .bot-table td:nth-child(8) { width:13%; }
+    .bot-table th:nth-child(9), .bot-table td:nth-child(9) { width:20%; }
     .ip-whois { color:var(--accent); text-decoration:underline dotted; text-underline-offset:3px; }
     .ip-whois:hover { color:var(--ink); }
     .table-wrap { overflow:auto; }
@@ -126,7 +135,7 @@
     </div>
     <div class="grid">
       <section><h2>Menaces</h2><p>Détection locale sur les requêtes du processus depuis son démarrage. Les erreurs serveur 5xx sont affichées mais ne sont pas considérées seules comme une menace.</p><div class="table-wrap"><table class="threat-table"><thead><tr><th>IP</th><th>Pays</th><th>Ville</th><th>Raison</th><th>Requêtes</th><th>Chemins observés</th></tr></thead><tbody id="threats"></tbody></table></div><div class="metric-label visitor-toolbar" style="margin-top:18px"><span>Visiteurs associés aux menaces</span><label for="threat-visitor-period">Période <select id="threat-visitor-period"><option value="today" selected>Aujourd’hui</option><option value="7d">7 jours</option><option value="30d">30 jours</option><option value="all">Tout</option></select></label></div><div class="table-wrap"><table class="traffic-table"><thead><tr><th>IP</th><th>Pays</th><th>Ville</th><th>Requêtes</th><th>Dernière activité</th><th>User-Agent</th></tr></thead><tbody id="threat-visitors"></tbody></table></div></section>
-      <section><h2>Trafic web</h2><div class="metric-label">Codes HTTP</div><div class="bars" id="web-status"></div><div class="metric-label" style="margin-top:18px">Chemins consultés</div><div class="bars" id="web-paths"></div><div class="metric-label visitor-toolbar" style="margin-top:18px"><span>Visiteurs réguliers et localisation GeoIP</span><label for="visitor-period">Période <select id="visitor-period"><option value="today" selected>Aujourd’hui</option><option value="7d">7 jours</option><option value="30d">30 jours</option><option value="all">Tout</option></select></label></div><div class="table-wrap"><table class="traffic-table"><thead><tr><th>IP</th><th>Pays</th><th>Ville</th><th>Requêtes</th><th>Dernière activité</th><th>User-Agent</th></tr></thead><tbody id="web-visitors"></tbody></table></div></section>
+      <section><h2>Trafic web</h2><div class="metric-label">Codes HTTP</div><div class="bars" id="web-status"></div><div class="metric-label" style="margin-top:18px">Chemins consultés</div><div class="bars" id="web-paths"></div><div class="metric-label visitor-toolbar" style="margin-top:18px"><span>Visiteurs réguliers et localisation GeoIP</span><label for="visitor-period">Période <select id="visitor-period"><option value="today" selected>Aujourd’hui</option><option value="7d">7 jours</option><option value="30d">30 jours</option><option value="all">Tout</option></select></label></div><div class="table-wrap"><table class="traffic-table"><thead><tr><th>IP</th><th>Pays</th><th>Ville</th><th>Requêtes</th><th>Dernière activité</th><th>User-Agent</th></tr></thead><tbody id="web-visitors"></tbody></table></div><div class="metric-label visitor-toolbar" style="margin-top:18px"><span>Bots détectés</span><label for="bot-period">Période <select id="bot-period"><option value="today" selected>Aujourd’hui</option><option value="7d">7 jours</option><option value="30d">30 jours</option><option value="all">Tout</option></select></label></div><div class="table-wrap"><table class="traffic-table bot-table"><thead><tr><th>Famille</th><th>Type</th><th>Confiance</th><th>IP</th><th>Pays</th><th>Ville</th><th>Requêtes</th><th>Dernière activité</th><th>User-Agent</th></tr></thead><tbody id="web-bots"></tbody></table></div></section>
     </div>
   </div>
   <div id="tab-requests" class="tab-panel" role="tabpanel" aria-labelledby="tab-button-requests" hidden>
@@ -154,6 +163,8 @@
   let visitorItems = [];
   let visitorPeriod = 'today';
   let threatVisitorPeriod = 'today';
+  let botItems = [];
+  let botPeriod = 'today';
   let threatItems = [];
   let sortKey = 'date';
   let sortDirection = -1;
@@ -257,6 +268,11 @@
     renderVisitors('threat-visitors', threatened, threatVisitorPeriod);
     renderVisitors('web-visitors', regular, visitorPeriod);
   }
+  function renderBots(bots = botItems) {
+    const cutoff = visitorCutoff(botPeriod);
+    const filtered = (bots || []).filter(item => botPeriod === 'all' || Number(item.last_seen_epoch || 0) >= cutoff);
+    document.getElementById('web-bots').innerHTML = filtered.length ? filtered.map(item => `<tr><td>${esc(item.bot_family || 'Other crawler')}</td><td>${esc(item.classification || 'suspected_bot')}</td><td>${esc(item.confidence || 'low')}</td><td>${whoisLink(item.ip)}</td><td>${esc(item.country)}</td><td>${esc(item.city)}</td><td>${number.format(item.requests)}</td><td>${esc(item.last_seen)}</td><td>${esc(item.user_agent || 'Inconnu')}</td></tr>`).join('') : '<tr><td colspan="9" class="empty">Aucun bot détecté pour cette période.</td></tr>';
+  }
   function render(data) {
     const r=data.requests, w=data.web;
     document.getElementById('request-count').textContent=number.format(r.count);
@@ -266,13 +282,14 @@
     document.getElementById('updated').textContent=`Mis à jour ${new Date(data.generated_at).toLocaleString('fr-FR')}`;
     document.getElementById('commit').textContent=`Commit chargé : ${data.commit || 'inconnu'}`;
     bars('services',r.by_service); bars('urgencies',r.by_urgency); bars('availability',r.by_availability); bars('request-statuses',r.by_status);
-    bars('web-status',w.by_status); renderPaths(w.by_path_status); visitorItems = w.visitors || []; threatItems = data.threats || []; renderVisitorGroups(visitorItems, threatItems); renderThreats(threatItems);
+    bars('web-status',w.by_status); renderPaths(w.by_path_status); visitorItems = w.visitors || []; botItems = w.bots || []; threatItems = data.threats || []; renderVisitorGroups(visitorItems, threatItems); renderBots(); renderThreats(threatItems);
     requestItems = r.items || [];
     renderRequests();
   }
   document.querySelectorAll('[data-sort]').forEach(button => button.addEventListener('click', () => { const nextKey=button.dataset.sort; if(sortKey===nextKey) sortDirection*=-1; else { sortKey=nextKey; sortDirection=1; } renderRequests(); }));
   document.getElementById('visitor-period').addEventListener('change', event => { visitorPeriod = event.target.value; renderVisitorGroups(visitorItems, threatItems); });
   document.getElementById('threat-visitor-period').addEventListener('change', event => { threatVisitorPeriod = event.target.value; renderVisitorGroups(visitorItems, threatItems); });
+  document.getElementById('bot-period').addEventListener('change', event => { botPeriod = event.target.value; renderBots(); });
   async function load() {
     const error=document.getElementById('error'); error.innerHTML='';
     try { const response=await fetch('/api/admin/stats',{cache:'no-store'}); if(!response.ok) throw new Error(`Erreur HTTP ${response.status}`); render(await response.json()); }
