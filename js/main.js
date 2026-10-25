@@ -496,7 +496,26 @@ async function loadPublicConfig() {
     if (!response.ok) return;
     const payload = await response.json();
     const legal = payload.legal || {};
-    legalFooter.textContent = [legal.business_name, legal.contact_name, legal.phone, legal.registration, legal.email].filter(Boolean).join(' - ');
+    legalFooter.replaceChildren();
+    const addSeparator = () => legalFooter.append(document.createTextNode(' - '));
+    const addText = (value) => {
+      if (!value) return;
+      if (legalFooter.childNodes.length) addSeparator();
+      legalFooter.append(document.createTextNode(value));
+    };
+    const addLink = (value, href) => {
+      if (!value) return;
+      if (legalFooter.childNodes.length) addSeparator();
+      const link = document.createElement('a');
+      link.href = href;
+      link.textContent = value;
+      legalFooter.append(link);
+    };
+    addText(legal.business_name);
+    addText(legal.contact_name);
+    if (legal.phone) addLink(legal.phone, `tel:${String(legal.phone).replace(/[^+\d]/g, '')}`);
+    addText(legal.registration);
+    if (legal.email) addLink(legal.email, `mailto:${legal.email}`);
   } catch (error) {
     // The generic footer remains visible if the public configuration is unavailable.
   }
