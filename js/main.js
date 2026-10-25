@@ -416,8 +416,28 @@ function resize() {
   camera.aspect = width / height;
   camera.updateProjectionMatrix();
 }
-window.addEventListener('resize', resize);
+const mobileSceneQuery = window.matchMedia('(max-width: 850px)');
+let mobileSceneDisabled = mobileSceneQuery.matches;
+let animationFrameId = null;
+function updateSceneRenderingMode() {
+  mobileSceneDisabled = mobileSceneQuery.matches;
+  mount.classList.toggle('is-mobile-disabled', mobileSceneDisabled);
+  mount.setAttribute('aria-hidden', mobileSceneDisabled ? 'true' : 'false');
+  window.__ATELIER_ROULANT_RENDER_ENABLED = !mobileSceneDisabled;
+  if (mobileSceneDisabled && animationFrameId !== null) {
+    window.cancelAnimationFrame(animationFrameId);
+    animationFrameId = null;
+  } else if (!mobileSceneDisabled && animationFrameId === null) {
+    animationFrameId = window.requestAnimationFrame(animate);
+  }
+}
+mobileSceneQuery.addEventListener('change', updateSceneRenderingMode);
+window.addEventListener('resize', () => {
+  updateSceneRenderingMode();
+  if (!mobileSceneDisabled) resize();
+});
 resize();
+updateSceneRenderingMode();
 updateLoadingProgress(88, 'Préparation de l’accueil…');
 
 let welcomeRevealed = false;
@@ -429,13 +449,18 @@ function revealWelcome() {
   loadingScreen.classList.add('is-hidden');
 }
 function animate(time) {
+  animationFrameId = null;
+  if (mobileSceneDisabled) {
+    revealWelcome();
+    return;
+  }
   drawCommuneSign(time);
   pointerRotation += (targetRotation - pointerRotation) * 0.045;
   group.rotation.y = vehicleOrientation + pointerRotation + Math.sin(time * 0.00035) * 0.035;
   group.position.y = 0.08 + Math.sin(time * 0.0012) * 0.035;
   renderer.render(scene, camera);
   revealWelcome();
-  requestAnimationFrame(animate);
+  animationFrameId = window.requestAnimationFrame(animate);
 }
 const offerButton = document.querySelector('.cta');
 const mairieButton = document.querySelector('#mairie-button');
@@ -932,7 +957,7 @@ humanContinue.addEventListener('click', async () => {
     humanFeedback.textContent = error.message;
   }
 });
-requestAnimationFrame(animate);
+if (!mobileSceneDisabled && animationFrameId === null) animationFrameId = window.requestAnimationFrame(animate);
 window.setTimeout(revealWelcome, 700);
 window.__ATELIER_ROULANT_READY = true;
 window.__ATELIER_ROULANT_CAMERA = camera;

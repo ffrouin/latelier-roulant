@@ -55,6 +55,7 @@
     #scene.is-fading { opacity:0; filter:blur(8px); pointer-events:none; }
     #scene.is-orbiting { cursor:grabbing; }
     #scene canvas { display:block; width:100%; height:100%; }
+    #scene.is-mobile-disabled { display:none; }
     .service-scene { position:fixed; inset:0; z-index:20; display:block; overflow-y:auto; overscroll-behavior:contain; padding:96px clamp(24px,6vw,96px) 48px; background:var(--paper); opacity:0; transform:translateY(18px); pointer-events:none; transition:opacity .8s ease, transform .8s ease; }
     .service-scene.is-visible { opacity:1; transform:translateY(0); pointer-events:auto; }
     .mairie-scene { position:fixed; inset:0; z-index:30; display:grid; place-items:start; overflow-y:auto; padding:40px 24px; background:var(--paper); opacity:0; transform:translateY(18px); pointer-events:none; transition:opacity .8s ease, transform .8s ease; }
@@ -180,7 +181,7 @@
     #legal-footer { display:flex; flex-wrap:wrap; justify-content:center; gap:.35rem .8rem; }
     #legal-footer a { color:inherit; text-underline-offset:3px; }
     @media (min-width:851px) and (max-height:700px) { .hero { padding-top:74px; padding-bottom:18px; gap:4px; } h1 { font-size:clamp(2.5rem,6vh,4rem); margin-bottom:16px; } .tagline { font-size:1rem; margin-bottom:18px; } #scene { min-height:220px; } .cta { padding:11px 16px; } footer { padding:12px 24px 16px; } }
-    @media (max-width:850px) { .page { height:auto; min-height:100vh; overflow-x:hidden; overflow-y:auto; } nav { position:relative; inset:auto; padding:22px clamp(20px,5vw,40px) 0; } .hero { min-height:calc(100vh - 108px); height:auto; padding:22px clamp(20px,5vw,40px) 40px; overflow:visible; } .copy { margin:0 auto; } #scene { min-height:0; height:100%; } h1 { max-width:550px; } .cards { grid-template-columns:repeat(2,1fr); } .section-head { display:block; } .section-head p { margin-top:18px; } }
+    @media (max-width:850px) { .page { height:auto; min-height:100vh; overflow-x:hidden; overflow-y:auto; background:#d4d1c6; } nav { position:relative; inset:auto; padding:22px clamp(20px,5vw,40px) 0; } .hero { min-height:calc(100vh - 108px); height:auto; padding:22px clamp(20px,5vw,40px) 40px; overflow:visible; background:#d4d1c6; } .copy { margin:0 auto; } #scene { min-height:0; height:100%; } h1 { max-width:550px; } .cards { grid-template-columns:repeat(2,1fr); } .section-head { display:block; } .section-head p { margin-top:18px; } }
     @media (max-width:520px) { nav { position:absolute; top:20px; left:20px; right:20px; padding:18px 20px 14px; background:#f3f1e9; border:1px solid rgba(24,33,31,.12); border-bottom:0; border-radius:18px 18px 0 0; } nav a { display:block; } .site-qr { width:62px; height:62px; } .hero { flex:0 0 100vh; height:100vh; min-height:100vh; box-sizing:border-box; padding:20px; } .copy { display:flex; flex-direction:column; justify-content:center; margin:0; height:100%; min-height:0; box-sizing:border-box; overflow-y:auto; padding:135px 22px 26px; } .services { padding:72px 20px; } .cards { grid-template-columns:1fr; } footer { padding:26px 20px; display:block; } footer span { display:block; margin-top:8px; } }
   </style>
 </head>
