@@ -956,12 +956,51 @@ GENERIC_BOT_SIGNATURE = re.compile(r"bot|crawler|spider|scrapy|headless|curl|wge
 def classify_user_agent(user_agent):
     """Classify a User-Agent for reporting; this is not an authentication signal."""
     value = (user_agent or "").strip()[:300]
+    browser_family = browser_family_from_user_agent(value)
     for family, signature in KNOWN_BOT_SIGNATURES:
         if signature.search(value):
-            return {"classification": "known_bot", "bot_family": family, "confidence": "medium", "reason": "user-agent"}
+            return {"classification": "known_bot", "bot_family": family, "browser_family": browser_family, "confidence": "medium", "reason": "user-agent"}
     if GENERIC_BOT_SIGNATURE.search(value):
-        return {"classification": "suspected_bot", "bot_family": "Other crawler", "confidence": "low", "reason": "user-agent"}
-    return {"classification": "human", "bot_family": "", "confidence": "", "reason": ""}
+        return {"classification": "suspected_bot", "bot_family": "Other crawler", "browser_family": browser_family, "confidence": "low", "reason": "user-agent"}
+    return {"classification": "human", "bot_family": "", "browser_family": browser_family, "confidence": "", "reason": ""}
+
+
+def browser_family_from_user_agent(user_agent):
+    """Return a display-oriented browser family; this is not a security signal."""
+    value = (user_agent or "").lower()
+    if "edgios" in value:
+        return "Edge iOS"
+    if "edga" in value or "edg/" in value:
+        return "Microsoft Edge"
+    if "opr/" in value or "opera" in value:
+        return "Opera"
+    if "samsungbrowser" in value:
+        return "Samsung Internet"
+    if "ucbrowser" in value or "ucweb" in value:
+        return "UC Browser"
+    if "yabrowser" in value:
+        return "Yandex Browser"
+    if "crios" in value:
+        return "Chrome iOS"
+    if "chrome/" in value or "chromium/" in value:
+        return "Google Chrome"
+    if "fxios" in value:
+        return "Firefox iOS"
+    if "firefox/" in value or "focus/" in value:
+        return "Mozilla Firefox"
+    if "safari/" in value and "chrome/" not in value and "crios" not in value and "android" not in value:
+        return "Apple Safari"
+    if "android" in value and "version/" in value:
+        return "Android Browser"
+    if "trident/" in value or "msie " in value:
+        return "Internet Explorer"
+    if "curl/" in value:
+        return "curl"
+    if "wget/" in value:
+        return "Wget"
+    if "python-requests" in value:
+        return "Python Requests"
+    return "Other / unknown"
 
 
 def visitor_rows(source, limit=200):
@@ -976,6 +1015,7 @@ def visitor_rows(source, limit=200):
             "user_agent": details.get("user_agent", ""),
             "classification": details.get("classification", "human"),
             "bot_family": details.get("bot_family", ""),
+            "browser_family": details.get("browser_family", "Other / unknown"),
             "confidence": details.get("confidence", ""),
             "reason": details.get("reason", ""),
             **_geoip(details.get("ip", key.split("|", 1)[0])),
@@ -1140,6 +1180,7 @@ class SiteHandler(SimpleHTTPRequestHandler):
                 visitor["bytes_sent"] += sent
                 visitor["last_seen"] = time.time()
                 visitor["user_agent"] = user_agent
+                visitor["browser_family"] = bot_info["browser_family"]
                 if len(WEB_VISITORS) > 2048:
                     oldest_visitor = min(WEB_VISITORS, key=lambda ip: WEB_VISITORS[ip]["last_seen"])
                     WEB_VISITORS.pop(oldest_visitor, None)
