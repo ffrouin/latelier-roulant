@@ -1266,6 +1266,7 @@ class SiteHandler(SimpleHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-Type", "application/pdf")
             self.send_header("Content-Disposition", f"inline; filename={pdf_path.name}")
+            self.send_header("X-Robots-Tag", "noindex, nofollow, noarchive")
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             self.wfile.write(body)
