@@ -35,8 +35,10 @@
     .metric-label { color:var(--muted); font-size:.82rem; margin-top:5px; }
     .visitor-toolbar { display:flex; align-items:center; justify-content:space-between; gap:12px; }
     .visitor-toolbar label { display:inline-flex; align-items:center; gap:7px; color:var(--muted); font-size:.75rem; font-weight:600; }
+    .visitor-toolbar label + label { margin-left:10px; }
     .visitor-toolbar select { border:1px solid var(--line); border-radius:4px; padding:5px 7px; color:var(--ink); background:#fff; font:500 .76rem Inter,system-ui,sans-serif; }
     .grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:18px; }
+    .dashboard-grid { grid-template-columns:minmax(0,1fr) minmax(0,1fr); }
     .bars { display:grid; gap:10px; }
     .bar-row { display:grid; grid-template-columns:minmax(110px,1fr) 2fr 35px; align-items:center; gap:10px; font-size:.86rem; }
     .bar { height:9px; background:#eeeae5; border-radius:99px; overflow:hidden; }
@@ -78,21 +80,24 @@
     .threat-visitor-table th:nth-child(5), .threat-visitor-table td:nth-child(5) { width:16%; }
     .threat-visitor-table th:nth-child(6), .threat-visitor-table td:nth-child(6) { width:37%; }
     .visitor-table th:nth-child(1), .visitor-table td:nth-child(1) { width:14%; }
-    .visitor-table th:nth-child(2), .visitor-table td:nth-child(2) { width:9%; }
-    .visitor-table th:nth-child(3), .visitor-table td:nth-child(3) { width:9%; }
-    .visitor-table th:nth-child(4), .visitor-table td:nth-child(4) { width:8%; }
-    .visitor-table th:nth-child(5), .visitor-table td:nth-child(5) { width:14%; }
-    .visitor-table th:nth-child(6), .visitor-table td:nth-child(6) { width:12%; }
-    .visitor-table th:nth-child(7), .visitor-table td:nth-child(7) { width:34%; }
-    .bot-table th:nth-child(1), .bot-table td:nth-child(1) { width:12%; }
-    .bot-table th:nth-child(2), .bot-table td:nth-child(2) { width:12%; }
-    .bot-table th:nth-child(3), .bot-table td:nth-child(3) { width:8%; }
-    .bot-table th:nth-child(4), .bot-table td:nth-child(4) { width:13%; }
-    .bot-table th:nth-child(5), .bot-table td:nth-child(5) { width:9%; }
-    .bot-table th:nth-child(6), .bot-table td:nth-child(6) { width:9%; }
-    .bot-table th:nth-child(7), .bot-table td:nth-child(7) { width:7%; }
-    .bot-table th:nth-child(8), .bot-table td:nth-child(8) { width:12%; }
-    .bot-table th:nth-child(9), .bot-table td:nth-child(9) { width:28%; }
+    .visitor-table th:nth-child(2), .visitor-table td:nth-child(2) { width:8%; }
+    .visitor-table th:nth-child(3), .visitor-table td:nth-child(3) { width:8%; }
+    .visitor-table th:nth-child(4), .visitor-table td:nth-child(4) { width:10%; }
+    .visitor-table th:nth-child(5), .visitor-table td:nth-child(5) { width:12%; }
+    .visitor-table th:nth-child(6), .visitor-table td:nth-child(6) { width:15%; }
+    .visitor-table th:nth-child(7), .visitor-table td:nth-child(7) { width:33%; }
+    .visitor-table th:nth-child(4), .visitor-table th:nth-child(6) { white-space:nowrap; }
+    .bot-table th:nth-child(1), .bot-table td:nth-child(1) { width:11%; }
+    .bot-table th:nth-child(2), .bot-table td:nth-child(2) { width:11%; }
+    .bot-table th:nth-child(3), .bot-table td:nth-child(3) { width:10%; }
+    .bot-table th:nth-child(4), .bot-table td:nth-child(4) { width:12%; }
+    .bot-table th:nth-child(5), .bot-table td:nth-child(5) { width:8%; }
+    .bot-table th:nth-child(6), .bot-table td:nth-child(6) { width:8%; }
+    .bot-table th:nth-child(7), .bot-table td:nth-child(7) { width:9%; }
+    .bot-table th:nth-child(8), .bot-table td:nth-child(8) { width:11%; }
+    .bot-table th:nth-child(9), .bot-table td:nth-child(9) { width:20%; }
+    .bot-table { min-width:980px; }
+    .bot-table th:nth-child(3), .bot-table th:nth-child(7) { white-space:nowrap; }
     .ip-whois { color:var(--accent); text-decoration:underline dotted; text-underline-offset:3px; }
     .ip-whois:hover { color:var(--ink); }
     .table-wrap { overflow:auto; }
@@ -140,9 +145,9 @@
       <div class="card"><div class="metric" id="uptime">—</div><div class="metric-label">durée du processus</div></div>
       <div class="card"><div class="metric" id="storage">—</div><div class="metric-label">stockage PDF</div></div>
     </div>
-    <div class="grid">
+    <div class="grid dashboard-grid">
       <section><h2>Menaces</h2><p>Détection locale sur les requêtes du processus depuis son démarrage. Les erreurs serveur 5xx sont affichées mais ne sont pas considérées seules comme une menace.</p><div class="table-wrap"><table class="threat-table"><thead><tr><th>IP</th><th>Pays</th><th>Ville</th><th>Raison</th><th>Requêtes</th><th>Chemins observés</th></tr></thead><tbody id="threats"></tbody></table></div><div class="metric-label visitor-toolbar" style="margin-top:18px"><span>Visiteurs associés aux menaces</span><label for="threat-visitor-period">Période <select id="threat-visitor-period"><option value="today" selected>Aujourd’hui</option><option value="7d">7 jours</option><option value="30d">30 jours</option><option value="all">Tout</option></select></label></div><div class="table-wrap"><table class="traffic-table threat-visitor-table"><thead><tr><th>IP</th><th>Pays</th><th>Ville</th><th>Requêtes</th><th>Dernière activité</th><th>User-Agent</th></tr></thead><tbody id="threat-visitors"></tbody></table></div><div class="metric-label visitor-toolbar" style="margin-top:18px"><span>Bots détectés</span><label for="bot-period">Période <select id="bot-period"><option value="today" selected>Aujourd’hui</option><option value="7d">7 jours</option><option value="30d">30 jours</option><option value="all">Tout</option></select></label></div><div class="table-wrap"><table class="traffic-table bot-table"><thead><tr><th>Famille</th><th>Type</th><th>Confiance</th><th>IP</th><th>Pays</th><th>Ville</th><th>Requêtes</th><th>Dernière activité</th><th>User-Agent</th></tr></thead><tbody id="web-bots"></tbody></table></div></section>
-      <section><h2>Trafic web</h2><div class="metric-label">Codes HTTP</div><div class="bars" id="web-status"></div><div class="metric-label" style="margin-top:18px">Chemins consultés</div><div class="bars" id="web-paths"></div><div class="metric-label visitor-toolbar" style="margin-top:18px"><span>Visiteurs réguliers et localisation GeoIP</span><label for="visitor-period">Période <select id="visitor-period"><option value="today" selected>Aujourd’hui</option><option value="7d">7 jours</option><option value="30d">30 jours</option><option value="all">Tout</option></select></label></div><div class="table-wrap"><table class="traffic-table visitor-table"><thead><tr><th>IP</th><th>Pays</th><th>Ville</th><th>Requêtes</th><th>Dernière activité</th><th>Navigateur</th><th>User-Agent</th></tr></thead><tbody id="web-visitors"></tbody></table></div></section>
+      <section><h2>Trafic web</h2><div class="metric-label">Codes HTTP</div><div class="bars" id="web-status"></div><div class="metric-label" style="margin-top:18px">Chemins consultés</div><div class="bars" id="web-paths"></div><div class="metric-label visitor-toolbar" style="margin-top:18px"><span>Visiteurs réguliers et localisation GeoIP</span><span><label for="visitor-period">Période <select id="visitor-period"><option value="today" selected>Aujourd’hui</option><option value="7d">7 jours</option><option value="30d">30 jours</option><option value="all">Tout</option></select></label><label for="visitor-country">Pays <select id="visitor-country"><option value="all" selected>Tous</option><option value="France">France</option></select></label></span></div><div class="table-wrap"><table class="traffic-table visitor-table"><thead><tr><th>IP</th><th>Pays</th><th>Ville</th><th>Requêtes</th><th>Dernière activité</th><th>Navigateur</th><th>User-Agent</th></tr></thead><tbody id="web-visitors"></tbody></table></div></section>
     </div>
   </div>
   <div id="tab-requests" class="tab-panel" role="tabpanel" aria-labelledby="tab-button-requests" hidden>
@@ -169,6 +174,7 @@
   let requestItems = [];
   let visitorItems = [];
   let visitorPeriod = 'today';
+  let visitorCountry = 'all';
   let threatVisitorPeriod = 'today';
   let botItems = [];
   let botPeriod = 'today';
@@ -263,10 +269,10 @@
     const days = period === '7d' ? 7 : 30;
     return Date.now() / 1000 - days * 86400;
   }
-  function renderVisitors(targetId, visitors, period, showBrowser = false) {
+  function renderVisitors(targetId, visitors, period, showBrowser = false, country = 'all') {
     const target = document.getElementById(targetId);
     const cutoff = visitorCutoff(period);
-    const filtered = (visitors || []).filter(item => period === 'all' || Number(item.last_seen_epoch || 0) >= cutoff);
+    const filtered = (visitors || []).filter(item => (period === 'all' || Number(item.last_seen_epoch || 0) >= cutoff) && (country === 'all' || item.country === country));
     target.innerHTML = filtered.length ? filtered.map(item => `<tr><td>${whoisLink(item.ip)}</td><td>${esc(item.country)}</td><td>${esc(item.city)}</td><td>${number.format(item.requests)}</td><td>${shortDate(item.last_seen)}</td>${showBrowser ? `<td>${esc(item.browser_family || 'Other / unknown')}</td>` : ''}<td>${esc(item.user_agent || 'Inconnu')}</td></tr>`).join('') : `<tr><td colspan="${showBrowser ? 7 : 6}" class="empty">Aucun visiteur pour cette période.</td></tr>`;
   }
   function renderVisitorGroups(visitors, threats) {
@@ -274,7 +280,7 @@
     const threatened = (visitors || []).filter(item => threatIps.has(item.ip));
     const regular = (visitors || []).filter(item => !threatIps.has(item.ip));
     renderVisitors('threat-visitors', threatened, threatVisitorPeriod);
-    renderVisitors('web-visitors', regular, visitorPeriod, true);
+    renderVisitors('web-visitors', regular, visitorPeriod, true, visitorCountry);
   }
   function renderBots(bots = botItems) {
     const cutoff = visitorCutoff(botPeriod);
@@ -296,6 +302,7 @@
   }
   document.querySelectorAll('[data-sort]').forEach(button => button.addEventListener('click', () => { const nextKey=button.dataset.sort; if(sortKey===nextKey) sortDirection*=-1; else { sortKey=nextKey; sortDirection=1; } renderRequests(); }));
   document.getElementById('visitor-period').addEventListener('change', event => { visitorPeriod = event.target.value; renderVisitorGroups(visitorItems, threatItems); });
+  document.getElementById('visitor-country').addEventListener('change', event => { visitorCountry = event.target.value; renderVisitorGroups(visitorItems, threatItems); });
   document.getElementById('threat-visitor-period').addEventListener('change', event => { threatVisitorPeriod = event.target.value; renderVisitorGroups(visitorItems, threatItems); });
   document.getElementById('bot-period').addEventListener('change', event => { botPeriod = event.target.value; renderBots(); });
   async function load() {
